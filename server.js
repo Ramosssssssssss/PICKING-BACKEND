@@ -7,7 +7,7 @@ const {
 } = require('file-type');
 
 const app = express();
-const PORT = 3051;
+const PORT = process.env.PORT || 3051;
 
 app.use(cors({
     origin: '*',
