@@ -50,7 +50,29 @@ function dbQuery(db, sql, params = []) {
         });
     });
 }
+function obtenerRangoSemanal() {
+    const hoy = new Date();
+    const diaSemana = hoy.getDay();
 
+    const diasDesdeViernes = (diaSemana + 7 - 5) % 7; 
+    const viernes = new Date(hoy);
+    viernes.setDate(hoy.getDate() - diasDesdeViernes);
+
+    const jueves = new Date(viernes);
+    jueves.setDate(viernes.getDate() + 6);
+
+    const formato = (fecha) => {
+        const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dd = String(fecha.getDate()).padStart(2, '0');
+        const yyyy = fecha.getFullYear();
+        return `${mm}/${dd}/${yyyy}`;
+    };
+
+    return {
+        fechaInicio: formato(viernes),
+        fechaFin: formato(jueves),
+    };
+}
 // LOGIN
 app.post('/login', async (req, res) => {
     console.log("✅ Petición recibida", req.headers, req.body);
@@ -130,30 +152,27 @@ app.post('/login', async (req, res) => {
             } catch (error) {
                 console.error('Error leyendo imagen BLOB:', error);
             }
-            let bono = {};
+         let bono = {};
 
-            
+try {
+    const { fechaInicio, fechaFin } = obtenerRangoSemanal();
+    const pickerId = userRow.PIKER_ID;
 
-            try {
-                const fechaInicio = '04/25/2025';
-                const fechaFin = '05/01/2025';
-                const pickerId = userRow.PIKER_ID;
-            
-                const bonoQuery = `
-                    SELECT * FROM DET_BONO_X_PICKER_BS(?, ?) 
-                    WHERE R_PICKER_ID = ?
-                `;
-            
-                const bonoResult = await dbQuery(db, bonoQuery, [fechaInicio, fechaFin, pickerId]);
-            
-                if (bonoResult.length > 0) {
-                    bono = bonoResult[0];
-                }
-            
-                console.log("✅ Bono cargado correctamente:", bono);
-            } catch (bonoErr) {
-                console.error("❌ Error al obtener bono:", bonoErr);
-            }
+    const bonoQuery = `
+        SELECT * FROM DET_BONO_X_PICKER_BS(?, ?) 
+        WHERE R_PICKER_ID = ?
+    `;
+
+    const bonoResult = await dbQuery(db, bonoQuery, [fechaInicio, fechaFin, pickerId]);
+
+    if (bonoResult.length > 0) {
+        bono = bonoResult[0];
+    }
+
+    console.log("✅ Bono cargado correctamente:", bono);
+} catch (bonoErr) {
+    console.error("❌ Error al obtener bono:", bonoErr);
+}
 
            let rank = null;
 
