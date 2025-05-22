@@ -75,6 +75,168 @@ function obtenerRangoSemanal() {
         fechaFin: formato(jueves),
     };
 }
+
+//SEGURIDAD
+
+app.post('/login-seguridad', (req, res) => {
+    const { usuario, contrasena } = req.body;
+
+    if (!usuario || !contrasena) {
+        return res.status(400).json({ error: 'Faltan credenciales' });
+    }
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Error de conexión a Firebird:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
+
+        const sql = `SELECT * FROM COLABORADORES WHERE USUARIO = ? AND CLAVE = ?`;
+
+        db.query(sql, [usuario, contrasena], (err, result) => {
+            db.detach();
+
+            if (err) {
+                console.error('Error en query:', err);
+                return res.status(500).json({ error: 'Error en consulta' });
+            }
+
+            if (result.length === 0) {
+                return res.status(401).json({ error: 'Credenciales inválidas' });
+            }
+
+            return res.json({ ok: true, colaborador: result[0] });
+        });
+    });
+});
+
+app.post('/registrar-visita', (req, res) => {
+    const {
+        nombre,
+        numero_celular,
+        motivo,
+        area_a_visitar,
+        colaborador_a_visitar,
+        credencial,
+        guardia
+    } = req.body;
+
+    if (!nombre || !numero_celular || !motivo || !area_a_visitar || !colaborador_a_visitar || !credencial || !guardia) {
+        return res.status(400).json({ error: 'Faltan datos obligatorios' });
+    }
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
+
+        const sql = `
+            INSERT INTO VISITAS_FYTTSANET 
+            (NOMBRE, NUMERO_CELULAR, MOTIVO, AREA_A_VISITAR, COLABORADOR_A_VISITAR, HORA_ENTRADA, FECHA_ENTRADA, CREDENCIAL, ACTIVO, GUARDIA)
+            VALUES (UPPER(?), UPPER(?), UPPER(?), UPPER(?), UPPER(?), CURRENT_TIME, CURRENT_DATE, UPPER(?), TRUE, UPPER(?))
+        `;
+
+        const params = [
+            nombre,
+            numero_celular,
+            motivo,
+            area_a_visitar,
+            colaborador_a_visitar,
+            credencial,
+            guardia
+        ];
+
+        db.query(sql, params, (err) => {
+            db.detach();
+            if (err) {
+                console.error('Error al insertar visita:', err);
+                return res.status(500).json({ error: 'Error al registrar visita' });
+            }
+
+            return res.json({ ok: true, mensaje: 'Visita registrada correctamente' });
+        });
+    });
+});
+// app.js o donde tengas tus rutas
+app.get('/visitas-activas', (req, res) => {
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
+
+        const sql = `
+      SELECT 
+        VISITA_ID,
+        NOMBRE,
+        MOTIVO,
+        AREA_A_VISITAR AS AREA,
+        COLABORADOR_A_VISITAR AS COLABORADOR,
+        HORA_ENTRADA,
+        FECHA_ENTRADA
+      FROM VISITAS_FYTTSANET
+      WHERE ACTIVO = TRUE
+      ORDER BY FECHA_ENTRADA DESC, HORA_ENTRADA DESC
+    `;
+
+        db.query(sql, (err, result) => {
+            db.detach();
+            if (err) {
+                console.error('Error al consultar visitas activas:', err);
+                return res.status(500).json({ error: 'Error al obtener visitas' });
+            }
+
+            return res.json(result);
+        });
+    });
+});
+
+app.post('/marcar-salida', (req, res) => {
+    const { visitas_id } = req.body;
+
+    if (!visitas_id) {
+        return res.status(400).json({ error: 'Falta visitas_id' });
+    }
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+        }
+
+        const sql = `
+            UPDATE VISITAS_FYTTSANET
+            SET ACTIVO = FALSE
+            WHERE VISITAS_ID = ?
+        `;
+
+        const idNum = parseInt(visitas_id);
+        if (isNaN(idNum)) {
+            db.detach();
+            return res.status(400).json({ error: 'visitas_id debe ser un número válido' });
+        }
+
+        db.query(sql, [idNum], (err, result) => {
+            if (err) {
+                db.detach();
+                console.error('Error al marcar salida:', err);
+                return res.status(500).json({ error: 'Error al actualizar la salida de la visita' });
+            }
+
+            db.commit((commitErr) => {
+                db.detach();
+                if (commitErr) {
+                    console.error('Error al hacer commit:', commitErr);
+                    return res.status(500).json({ error: 'Error al guardar los cambios' });
+                }
+
+                return res.json({ ok: true, mensaje: 'Salida marcada correctamente' });
+            });
+        });
+    });
+});
+
 //recibos: 
 app.post('/consulta-recibos', (req, res) => {
     const { folio, sucursalDestinoId } = req.body;
