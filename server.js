@@ -158,6 +158,7 @@ app.post('/registrar-visita', (req, res) => {
         });
     });
 });
+// app.js o donde tengas tus rutas
 app.get('/visitas-activas', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
@@ -190,6 +191,82 @@ app.get('/visitas-activas', (req, res) => {
         });
     });
 });
+app.post('/marcar-salida-por-credencial', (req, res) => {
+    const { credencial } = req.body;
+
+    if (!credencial) {
+        return res.status(400).json({ error: 'Falta credencial' });
+    }
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
+
+        const sql = `
+            UPDATE VISITAS_FYTTSANET
+            SET ACTIVO = FALSE
+            WHERE CREDENCIAL = ? AND ACTIVO = TRUE
+        `;
+
+        db.query(sql, [credencial], (err, result) => {
+            db.detach();
+
+            if (err) {
+                console.error('Error al marcar salida:', err);
+                return res.status(500).json({ error: 'Error al actualizar la visita' });
+            }
+
+            return res.json({ ok: true, mensaje: 'Salida marcada por credencial' });
+        });
+    });
+});
+
+app.post('/verificar-credencial-activa', (req, res) => {
+    const { credencial } = req.body;
+
+    if (!credencial) {
+        return res.status(400).json({ error: 'Falta credencial' });
+    }
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+        }
+
+        const sql = `
+            SELECT FIRST 1 VISITA_ID, NOMBRE, FECHA_ENTRADA, HORA_ENTRADA
+            FROM VISITAS_FYTTSANET
+            WHERE CREDENCIAL = ? AND ACTIVO = TRUE
+        `;
+
+        db.query(sql, [credencial], (err, result) => {
+            db.detach();
+
+            if (err) {
+                console.error('Error al verificar credencial activa:', err);
+                return res.status(500).json({ error: 'Error al consultar visitas activas' });
+            }
+
+            if (result.length > 0) {
+                // Devuelve también el VISITAS_ID y otros datos útiles si se desea
+                const visita = result[0];
+                return res.json({
+                    activa: true,
+                    visitas_id: visita.VISITAS_ID,
+                    nombre: visita.NOMBRE,
+                    fecha_entrada: visita.FECHA_ENTRADA,
+                    hora_entrada: visita.HORA_ENTRADA
+                });
+            } else {
+                return res.json({ activa: false });
+            }
+        });
+    });
+});
+
 
 app.post('/marcar-salida', (req, res) => {
     const { visitas_id } = req.body;
@@ -228,6 +305,74 @@ app.post('/marcar-salida', (req, res) => {
         });
     });
 });
+app.post('/obtener-visita-activa', (req, res) => {
+  const { credencial } = req.body;
+
+  if (!credencial) {
+    return res.status(400).json({ error: 'Falta credencial' });
+  }
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Conexión Firebird fallida:', err);
+      return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+    }
+
+    const sql = `
+      SELECT FIRST 1 * FROM VISITAS_FYTTSANET
+      WHERE CREDENCIAL = ? AND ACTIVO = TRUE
+    `;
+
+    db.query(sql, [credencial], (err, result) => {
+      db.detach();
+
+      if (err) {
+        console.error('Error al obtener visita activa:', err);
+        return res.status(500).json({ error: 'Error al consultar visita activa' });
+      }
+
+      if (result.length > 0) {
+        return res.json({ activa: true, visita: result[0] });
+      } else {
+        return res.json({ activa: false });
+      }
+    });
+  });
+});
+
+app.get('/historial', (req, res) => {
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
+
+        const sql = `
+      SELECT 
+        VISITA_ID,
+        NOMBRE,
+        MOTIVO,
+        AREA_A_VISITAR AS AREA,
+        COLABORADOR_A_VISITAR AS COLABORADOR,
+        HORA_ENTRADA,
+        FECHA_ENTRADA
+      FROM VISITAS_FYTTSANET
+      WHERE ACTIVO = FALSE
+      ORDER BY FECHA_ENTRADA DESC, HORA_ENTRADA DESC
+    `;
+
+        db.query(sql, (err, result) => {
+            db.detach();
+            if (err) {
+                console.error('Error al consultar visitas activas:', err);
+                return res.status(500).json({ error: 'Error al obtener visitas' });
+            }
+
+            return res.json(result);
+        });
+    });
+});
+
 
 //recibos: 
 app.post('/consulta-recibos', (req, res) => {
