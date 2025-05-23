@@ -158,7 +158,6 @@ app.post('/registrar-visita', (req, res) => {
         });
     });
 });
-// app.js o donde tengas tus rutas
 app.get('/visitas-activas', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
@@ -208,7 +207,7 @@ app.post('/marcar-salida', (req, res) => {
         const sql = `
             UPDATE VISITAS_FYTTSANET
             SET ACTIVO = FALSE
-            WHERE VISITAS_ID = ?
+            WHERE VISITA_ID = ?
         `;
 
         const idNum = parseInt(visitas_id);
@@ -218,21 +217,14 @@ app.post('/marcar-salida', (req, res) => {
         }
 
         db.query(sql, [idNum], (err, result) => {
+            db.detach(); // Siempre liberar conexión
+
             if (err) {
-                db.detach();
                 console.error('Error al marcar salida:', err);
                 return res.status(500).json({ error: 'Error al actualizar la salida de la visita' });
             }
 
-            db.commit((commitErr) => {
-                db.detach();
-                if (commitErr) {
-                    console.error('Error al hacer commit:', commitErr);
-                    return res.status(500).json({ error: 'Error al guardar los cambios' });
-                }
-
-                return res.json({ ok: true, mensaje: 'Salida marcada correctamente' });
-            });
+            return res.json({ ok: true, mensaje: 'Salida marcada correctamente' });
         });
     });
 });
