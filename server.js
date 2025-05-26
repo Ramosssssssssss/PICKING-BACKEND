@@ -75,7 +75,98 @@ function obtenerRangoSemanal() {
         fechaFin: formato(jueves),
     };
 }
+const COLABORADORES_POR_AREA = {
+  B2G: [
+    { nombre: "José Eduardo Trejo Aguilar", telefono: "5215580409415" },
+    { nombre: "Isidro Correa Rosales", telefono: "5215580058192" }
+  ],
 
+   CEDIS: [{ nombre: "Uriel Fuentes Negrete", telefono: "5215580081079" }],
+    COMERCIAL: [{ nombre: "Ivonne Espejel Navarro", telefono: "5215515292038" }],
+  COMEX: [
+    { nombre: "Raul Hernandez", telefono: "5215525154668" },
+    { nombre: "Erik Ramos", telefono: "5215513849706" },
+    { nombre: "Luis Rodrigo Urrutia Parra", telefono: "5215580058190" },
+    { nombre: "Sergio Moncayo Arcos", telefono: "5215580058194" },
+    { nombre: "Comex Tepexpan", telefono: "5215579079466" },
+  ],
+  CONTABILIDAD: [
+    { nombre: "Midory Elizabeth Cantellan Barrales", telefono: "5215519186598" },
+    { nombre: "Yanci Vargas", telefono: "5215619885095" },
+    { nombre: "Luis Fernando Cruz Hernandez", telefono: "521580058183" },
+    { nombre: "Jose De Jesus Cortes Badillo", telefono: "5215639602729" },
+    { nombre: "Ignacio Tovar Garfias", telefono: "5215562541648" },
+  ],
+  CxC: [
+    { nombre: "Jose Luis Lievano Hernandez", telefono: "5215515292079" },
+    { nombre: "Samuel Jimenez", telefono: "5215571862205" },
+    { nombre: "Estephanie Anguiano Castillo", telefono: "5215551993949" },
+  ],
+  DESARROLLO: [
+    { nombre: "Anahi Jasmin Bautista Gomez", telefono: "5215537571252" },
+    { nombre: "Teresa Dominguez", telefono: "5215511403981" },
+    { nombre: "Luis Daniel Luna Hernandez", telefono: "5215610204718" },
+    { nombre: "Joaquin Chacon", telefono: "5215581010843" },
+    { nombre: "Evelin Huerta Ocana", telefono: "5215580274770" },
+  ],
+  DIRECCIÓN: [
+    { nombre: "Jeroboam Sanchez Lopez", telefono: "5215526536608" },
+    { nombre: "Guillermo Sanchez", telefono: "5215580059964" },
+  ],
+  FLOTILLA: [{ nombre: "Carlos Caballero", telefono: "5215514452510" }],
+  INVENTARIOS: [
+    { nombre: "Miguel Angel Tolentino Pedraza", telefono: "5215580058187" },
+    { nombre: "Hector Ramirez", telefono: "5215580409314" },
+  ],
+  MANTENIMIENTO: [
+    { nombre: "Samuel Martinez", telefono: "5215575611800" },
+    { nombre: "Luis Angel Castellanos Vigueras", telefono: "5215515648223" },
+    { nombre: "Miguel Angel Coronel Calvo", telefono: "5215618569222" },
+  ],
+  MAYORISTA: [
+    { nombre: "Susana Lazcano Campos", telefono: "5215545100424" },
+    { nombre: "Uriel Torres", telefono: "5215554015539" },
+    { nombre: "J Mercedes Serrano Moreno", telefono: "5215579213456" },
+  ],
+  MERCADOTECNIA: [
+    { nombre: "Ruth Rebeca Fernandez Montoya", telefono: "5215576338433" },
+    { nombre: "Rubi Tovar", telefono: "5215951096570" },
+    { nombre: "Javier Hernandez Castillo", telefono: "5215529637383" },
+  ],
+  PDS: [
+    { nombre: "Marisol Vazquez Gallardo", telefono: "5215519099986" },
+    { nombre: "Paola Vazquez", telefono: "52155807076" },
+    { nombre: "Norma Espinoza Rojas", telefono: "5215619885100" },
+    { nombre: "Auric Saul Morales Hernandez", telefono: "5215662207015" },
+    { nombre: "Marco Jonathan Osorio De La Cruz", telefono: "5215563333115" },
+
+  ],
+  PROGRAMACIÓN: [
+    { nombre: "Jorge Alfredo Jones Spindola", telefono: "5215534161524" },
+    { nombre: "Celeste Guadalupe Zenteno Roldan", telefono: "5215560410509" },
+    { nombre: "Daniel Garcia", telefono: "5215637803290" },
+    { nombre: "Jonathan Noe Gallardo Villegas", telefono: "5215641138710" },
+    { nombre: "Diego Mauricio Ramos Cordova", telefono: "5215665596672" },
+  ],
+  RETAIL: [
+    { nombre: "Jennifer Salazar Salamanca", telefono: "5215544788591" },
+    { nombre: "Maria Guadalupe Contreras Cruz", telefono: "5215566773395" },
+    { nombre: "Arandi Ramirez", telefono: "5215569720764" },
+  ],
+  SEGURIDAD: [
+    { nombre: "C B", telefono: "5215625595483" },
+    { nombre: "Cerevro DFR", telefono: "5215612660130" },
+    { nombre: "C A", telefono: "5215625595483" },
+  ],
+  SAC: [
+    { nombre: "Sheilin Calete", telefono: "5215563228516" },
+  ],
+  SISTEMAS: [
+    { nombre: "Ivan Rios", telefono: "5215518497251" },
+    { nombre: "Isaac Cortes", telefono: "5215547644716" },
+  ],
+
+};
 //SEGURIDAD
 
 app.post('/login-seguridad', (req, res) => {
@@ -111,52 +202,92 @@ app.post('/login-seguridad', (req, res) => {
 });
 
 app.post('/registrar-visita', (req, res) => {
-    const {
-        nombre,
-        numero_celular,
-        motivo,
-        area_a_visitar,
-        colaborador_a_visitar,
-        credencial,
-        guardia
-    } = req.body;
+  const {
+    nombre,
+    numero_celular,
+    motivo,
+    area_a_visitar,
+    colaborador_a_visitar,
+    credencial,
+    guardia
+  } = req.body;
 
-    if (!nombre || !numero_celular || !motivo || !area_a_visitar || !colaborador_a_visitar || !credencial || !guardia) {
-        return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  if (!nombre || !numero_celular || !motivo || !area_a_visitar || !colaborador_a_visitar || !credencial || !guardia) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Conexión Firebird fallida:', err);
+      return res.status(500).json({ error: 'Error de conexión' });
     }
 
-    Firebird.attach(firebirdConfig, (err, db) => {
-        if (err) {
-            console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión' });
-        }
+    const insertQuery = `
+      INSERT INTO VISITAS_FYTTSANET 
+      (NOMBRE, NUMERO_CELULAR, MOTIVO, AREA_A_VISITAR, COLABORADOR_A_VISITAR, HORA_ENTRADA, FECHA_ENTRADA, CREDENCIAL, ACTIVO, GUARDIA)
+      VALUES (UPPER(?), UPPER(?), UPPER(?), UPPER(?), UPPER(?), CURRENT_TIME, CURRENT_DATE, UPPER(?), TRUE, UPPER(?))
+    `;
 
-        const sql = `
-            INSERT INTO VISITAS_FYTTSANET 
-            (NOMBRE, NUMERO_CELULAR, MOTIVO, AREA_A_VISITAR, COLABORADOR_A_VISITAR, HORA_ENTRADA, FECHA_ENTRADA, CREDENCIAL, ACTIVO, GUARDIA)
-            VALUES (UPPER(?), UPPER(?), UPPER(?), UPPER(?), UPPER(?), CURRENT_TIME, CURRENT_DATE, UPPER(?), TRUE, UPPER(?))
-        `;
+    const params = [
+      nombre,
+      numero_celular,
+      motivo,
+      area_a_visitar,
+      colaborador_a_visitar,
+      credencial,
+      guardia
+    ];
 
-        const params = [
-            nombre,
-            numero_celular,
-            motivo,
-            area_a_visitar,
-            colaborador_a_visitar,
-            credencial,
-            guardia
-        ];
+    db.query(insertQuery, params, (err) => {
+      db.detach(); 
 
-        db.query(sql, params, (err) => {
-            db.detach();
-            if (err) {
-                console.error('Error al insertar visita:', err);
-                return res.status(500).json({ error: 'Error al registrar visita' });
-            }
+      if (err) {
+        console.error('Error al insertar visita:', err);
+        return res.status(500).json({ error: 'Error al registrar visita' });
+      }
 
-            return res.json({ ok: true, mensaje: 'Visita registrada correctamente' });
-        });
+      const colaboradoresArea = COLABORADORES_POR_AREA[area_a_visitar.toUpperCase()] || [];
+      const colaborador = colaboradoresArea.find(
+        (c) => c.nombre.toUpperCase() === colaborador_a_visitar.toUpperCase()
+      );
+
+      if (!colaborador) {
+        console.warn('Colaborador no encontrado para envío de WhatsApp');
+        return res.json({ ok: true, mensaje: 'Visita registrada. WhatsApp no enviado (colaborador no encontrado)' });
+      }
+
+      // Preparar datos para WhatsApp
+      const whatsappPayload = {
+        recipients: colaborador.telefono,
+        template_id: 'e5602145-7741-48aa-9b59-26a6bfe559a1',
+        contact_type: 'phone',
+        from_id: 7857, // Ej. 8217
+        body_vars: [
+          { text: '{{1}}', val: nombre }
+        ],
+        chatbot_status: 'disable',
+        conversation_status: 'unchanged'
+      };
+
+      fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(whatsappPayload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('WhatsApp enviado:', data);
+        res.json({ ok: true, mensaje: 'Visita registrada y WhatsApp enviado' });
+      })
+      .catch(error => {
+        console.error('Error al enviar WhatsApp:', error);
+        res.json({ ok: true, mensaje: 'Visita registrada. Error al enviar WhatsApp' });
+      });
     });
+  });
 });
 // app.js o donde tengas tus rutas
 app.get('/visitas-activas', (req, res) => {
