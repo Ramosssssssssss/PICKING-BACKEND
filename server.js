@@ -259,7 +259,7 @@ app.post('/registrar-visita', (req, res) => {
       // Preparar datos para WhatsApp
       const whatsappPayload = {
         recipients: colaborador.telefono,
-        template_id: 'e5602145-7741-48aa-9b59-26a6bfe559a1',
+        template_id: '8bc0f7c7-5cc5-46a7-99a3-bc42be16aad3',
         contact_type: 'phone',
         from_id: 7857, // Ej. 8217
         body_vars: [
