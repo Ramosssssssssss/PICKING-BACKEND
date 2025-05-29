@@ -165,21 +165,37 @@ const COLABORADORES_POR_AREA = {
     { nombre: "Ivan Rios", telefono: "5215518497251" },
     { nombre: "Isaac Cortes", telefono: "5215547644716" },
   ],
+ GOBIERNO: [
+    { nombre: "Valeria", telefono: "5215528249961" },
+    { nombre: "Norma Espinoza", telefono: "5215619885100" },
+    { nombre: "Ana", telefono: "5215579222636" },
+    { nombre: "Emannuel Hernandez", telefono: "5215580285476" },
+    { nombre: "Javier", telefono: "5215516030811" },
+
+  ],
+    EDIFICACION: [{ nombre: "Pedro", telefono: "5215575352255" }],
 
 };
 //SEGURIDAD
 
 app.post('/login-seguridad', (req, res) => {
-    const { usuario, contrasena } = req.body;
+    const {
+        usuario,
+        contrasena
+    } = req.body;
 
     if (!usuario || !contrasena) {
-        return res.status(400).json({ error: 'Faltan credenciales' });
+        return res.status(400).json({
+            error: 'Faltan credenciales'
+        });
     }
 
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Error de conexión a Firebird:', err);
-            return res.status(500).json({ error: 'Error de conexión' });
+            return res.status(500).json({
+                error: 'Error de conexión'
+            });
         }
 
         const sql = `SELECT * FROM COLABORADORES WHERE USUARIO = ? AND CLAVE = ?`;
@@ -189,112 +205,139 @@ app.post('/login-seguridad', (req, res) => {
 
             if (err) {
                 console.error('Error en query:', err);
-                return res.status(500).json({ error: 'Error en consulta' });
+                return res.status(500).json({
+                    error: 'Error en consulta'
+                });
             }
 
             if (result.length === 0) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
+                return res.status(401).json({
+                    error: 'Credenciales inválidas'
+                });
             }
 
-            return res.json({ ok: true, colaborador: result[0] });
+            return res.json({
+                ok: true,
+                colaborador: result[0]
+            });
         });
     });
 });
 
+//registrar visita para guardias con credencial
 app.post('/registrar-visita', (req, res) => {
-  const {
-    nombre,
-    numero_celular,
-    motivo,
-    area_a_visitar,
-    colaborador_a_visitar,
-    credencial,
-    guardia
-  } = req.body;
+    const {
+        nombre,
+        numero_celular,
+        motivo,
+        area_a_visitar,
+        colaborador_a_visitar,
+        credencial,
+        guardia
+    } = req.body;
 
-  if (!nombre || !numero_celular || !motivo || !area_a_visitar || !colaborador_a_visitar || !credencial || !guardia) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios' });
-  }
-
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Conexión Firebird fallida:', err);
-      return res.status(500).json({ error: 'Error de conexión' });
+    if (!nombre || !numero_celular || !motivo || !area_a_visitar || !colaborador_a_visitar || !credencial || !guardia) {
+        return res.status(400).json({
+            error: 'Faltan datos obligatorios'
+        });
     }
 
-    const insertQuery = `
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({
+                error: 'Error de conexión'
+            });
+        }
+
+        const insertQuery = `
       INSERT INTO VISITAS_FYTTSANET 
       (NOMBRE, NUMERO_CELULAR, MOTIVO, AREA_A_VISITAR, COLABORADOR_A_VISITAR, HORA_ENTRADA, FECHA_ENTRADA, CREDENCIAL, ACTIVO, GUARDIA)
       VALUES (UPPER(?), UPPER(?), UPPER(?), UPPER(?), UPPER(?), CURRENT_TIME, CURRENT_DATE, UPPER(?), TRUE, UPPER(?))
     `;
 
-    const params = [
-      nombre,
-      numero_celular,
-      motivo,
-      area_a_visitar,
-      colaborador_a_visitar,
-      credencial,
-      guardia
-    ];
+        const params = [
+            nombre,
+            numero_celular,
+            motivo,
+            area_a_visitar,
+            colaborador_a_visitar,
+            credencial,
+            guardia
+        ];
 
-    db.query(insertQuery, params, (err) => {
-      db.detach(); 
+        db.query(insertQuery, params, (err) => {
+            db.detach();
 
-      if (err) {
-        console.error('Error al insertar visita:', err);
-        return res.status(500).json({ error: 'Error al registrar visita' });
-      }
+            if (err) {
+                console.error('Error al insertar visita:', err);
+                return res.status(500).json({
+                    error: 'Error al registrar visita'
+                });
+            }
 
-      const colaboradoresArea = COLABORADORES_POR_AREA[area_a_visitar.toUpperCase()] || [];
-      const colaborador = colaboradoresArea.find(
-        (c) => c.nombre.toUpperCase() === colaborador_a_visitar.toUpperCase()
-      );
+            const colaboradoresArea = COLABORADORES_POR_AREA[area_a_visitar.toUpperCase()] || [];
+            const colaborador = colaboradoresArea.find(
+                (c) => c.nombre.toUpperCase() === colaborador_a_visitar.toUpperCase()
+            );
 
-      if (!colaborador) {
-        console.warn('Colaborador no encontrado para envío de WhatsApp');
-        return res.json({ ok: true, mensaje: 'Visita registrada. WhatsApp no enviado (colaborador no encontrado)' });
-      }
+            if (!colaborador) {
+                console.warn('Colaborador no encontrado para envío de WhatsApp');
+                return res.json({
+                    ok: true,
+                    mensaje: 'Visita registrada. WhatsApp no enviado (colaborador no encontrado)'
+                });
+            }
 
-      // Preparar datos para WhatsApp
-      const whatsappPayload = {
-        recipients: colaborador.telefono,
-        template_id: '8bc0f7c7-5cc5-46a7-99a3-bc42be16aad3',
-        contact_type: 'phone',
-        from_id: 7857, // Ej. 8217
-        body_vars: [
-          { text: '{{1}}', val: nombre }
-        ],
-        chatbot_status: 'disable',
-        conversation_status: 'unchanged'
-      };
+            // Preparar datos para WhatsApp
+            const whatsappPayload = {
+                recipients: colaborador.telefono,
+                template_id: 'e5602145-7741-48aa-9b59-26a6bfe559a1',
+                contact_type: 'phone',
+                from_id: 7857, 
+                body_vars: [{
+                    text: '{{1}}',
+                    val: nombre
+                }],
+                chatbot_status: 'disable',
+                conversation_status: 'unchanged'
+            };
 
-      fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(whatsappPayload)
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('WhatsApp enviado:', data);
-        res.json({ ok: true, mensaje: 'Visita registrada y WhatsApp enviado' });
-      })
-      .catch(error => {
-        console.error('Error al enviar WhatsApp:', error);
-        res.json({ ok: true, mensaje: 'Visita registrada. Error al enviar WhatsApp' });
-      });
+            fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(whatsappPayload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('WhatsApp enviado:', data);
+                    res.json({
+                        ok: true,
+                        mensaje: 'Visita registrada y WhatsApp enviado'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al enviar WhatsApp:', error);
+                    res.json({
+                        ok: true,
+                        mensaje: 'Visita registrada. Error al enviar WhatsApp'
+                    });
+                });
+        });
     });
-  });
 });
-// app.js o donde tengas tus rutas
+
+//VISITAS ACTIVAS
 app.get('/visitas-activas', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión' });
+            return res.status(500).json({
+                error: 'Error de conexión'
+            });
         }
 
         const sql = `
@@ -305,7 +348,7 @@ app.get('/visitas-activas', (req, res) => {
         AREA_A_VISITAR AS AREA,
         COLABORADOR_A_VISITAR AS COLABORADOR,
         HORA_ENTRADA,
-        FECHA_ENTRADA
+        FECHA_ENTRADA, GUARDIA
       FROM VISITAS_FYTTSANET
       WHERE ACTIVO = TRUE
       ORDER BY FECHA_ENTRADA DESC, HORA_ENTRADA DESC
@@ -315,7 +358,9 @@ app.get('/visitas-activas', (req, res) => {
             db.detach();
             if (err) {
                 console.error('Error al consultar visitas activas:', err);
-                return res.status(500).json({ error: 'Error al obtener visitas' });
+                return res.status(500).json({
+                    error: 'Error al obtener visitas'
+                });
             }
 
             return res.json(result);
@@ -323,7 +368,7 @@ app.get('/visitas-activas', (req, res) => {
     });
 });
 app.post('/marcar-salida-por-credencial', (req, res) => {
-    const { credencial } = req.body;
+    const { credencial, enviar_mensaje = true } = req.body;
 
     if (!credencial) {
         return res.status(400).json({ error: 'Falta credencial' });
@@ -335,36 +380,115 @@ app.post('/marcar-salida-por-credencial', (req, res) => {
             return res.status(500).json({ error: 'Error de conexión' });
         }
 
-        const sql = `
-            UPDATE VISITAS_FYTTSANET
-            SET ACTIVO = FALSE
+        const selectSql = `
+            SELECT FIRST 1 NOMBRE, AREA_A_VISITAR, COLABORADOR_A_VISITAR
+            FROM VISITAS_FYTTSANET
             WHERE CREDENCIAL = ? AND ACTIVO = TRUE
         `;
 
-        db.query(sql, [credencial], (err, result) => {
-            db.detach();
-
-            if (err) {
-                console.error('Error al marcar salida:', err);
-                return res.status(500).json({ error: 'Error al actualizar la visita' });
+        db.query(selectSql, [credencial], (err, result) => {
+            if (err || result.length === 0) {
+                db.detach();
+                console.error('No se pudo obtener visita activa:', err || 'No encontrada');
+                return res.status(404).json({ error: 'No se encontró visita activa con esa credencial' });
             }
 
-            return res.json({ ok: true, mensaje: 'Salida marcada por credencial' });
+            const { NOMBRE, AREA_A_VISITAR, COLABORADOR_A_VISITAR } = result[0];
+
+            const updateSql = `
+                UPDATE VISITAS_FYTTSANET
+                SET ACTIVO = FALSE
+                WHERE CREDENCIAL = ? AND ACTIVO = TRUE
+            `;
+
+            db.query(updateSql, [credencial], (err) => {
+                db.detach();
+
+                if (err) {
+                    console.error('Error al marcar salida:', err);
+                    return res.status(500).json({ error: 'Error al actualizar la visita' });
+                }
+
+                if (!enviar_mensaje) {
+                    return res.json({
+                        ok: true,
+                        mensaje: 'Salida marcada sin WhatsApp (modo silencioso)'
+                    });
+                }
+
+                const colaboradoresArea = COLABORADORES_POR_AREA[AREA_A_VISITAR.toUpperCase()] || [];
+                const colaborador = colaboradoresArea.find(
+                    (c) => c.nombre.toUpperCase() === COLABORADOR_A_VISITAR.toUpperCase()
+                );
+
+                if (!colaborador) {
+                    console.warn('Colaborador no encontrado para WhatsApp');
+                    return res.json({
+                        ok: true,
+                        mensaje: 'Salida marcada. WhatsApp no enviado (colaborador no encontrado)'
+                    });
+                }
+
+                const whatsappPayload = {
+                    recipients: colaborador.telefono,
+                    template_id: 'e5602145-7741-48aa-9b59-26a6bfe559a1',
+                    contact_type: 'phone',
+                    from_id: 7857,
+                    body_vars: [{
+                        text: '{{1}}',
+                        val: NOMBRE
+                    }],
+                    chatbot_status: 'disable',
+                    conversation_status: 'unchanged'
+                };
+
+                fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(whatsappPayload)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('WhatsApp de salida enviado:', data);
+                        res.json({
+                            ok: true,
+                            mensaje: 'Salida marcada y WhatsApp enviado'
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error al enviar WhatsApp de salida:', error);
+                        res.json({
+                            ok: true,
+                            mensaje: 'Salida marcada. Error al enviar WhatsApp'
+                        });
+                    });
+            });
         });
     });
 });
 
+
+
 app.post('/verificar-credencial-activa', (req, res) => {
-    const { credencial } = req.body;
+    const {
+        credencial
+    } = req.body;
 
     if (!credencial) {
-        return res.status(400).json({ error: 'Falta credencial' });
+        return res.status(400).json({
+            error: 'Falta credencial'
+        });
     }
 
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+            return res.status(500).json({
+                error: 'Error de conexión a la base de datos'
+            });
         }
 
         const sql = `
@@ -378,7 +502,9 @@ app.post('/verificar-credencial-activa', (req, res) => {
 
             if (err) {
                 console.error('Error al verificar credencial activa:', err);
-                return res.status(500).json({ error: 'Error al consultar visitas activas' });
+                return res.status(500).json({
+                    error: 'Error al consultar visitas activas'
+                });
             }
 
             if (result.length > 0) {
@@ -392,24 +518,32 @@ app.post('/verificar-credencial-activa', (req, res) => {
                     hora_entrada: visita.HORA_ENTRADA
                 });
             } else {
-                return res.json({ activa: false });
+                return res.json({
+                    activa: false
+                });
             }
         });
     });
 });
 
-
+//DAR SALIDA DE VISITANTES
 app.post('/marcar-salida', (req, res) => {
-    const { visitas_id } = req.body;
+    const {
+        visitas_id
+    } = req.body;
 
     if (!visitas_id) {
-        return res.status(400).json({ error: 'Falta visitas_id' });
+        return res.status(400).json({
+            error: 'Falta visitas_id'
+        });
     }
 
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+            return res.status(500).json({
+                error: 'Error de conexión a la base de datos'
+            });
         }
 
         const sql = `
@@ -421,7 +555,9 @@ app.post('/marcar-salida', (req, res) => {
         const idNum = parseInt(visitas_id);
         if (isNaN(idNum)) {
             db.detach();
-            return res.status(400).json({ error: 'visitas_id debe ser un número válido' });
+            return res.status(400).json({
+                error: 'visitas_id debe ser un número válido'
+            });
         }
 
         db.query(sql, [idNum], (err, result) => {
@@ -429,53 +565,75 @@ app.post('/marcar-salida', (req, res) => {
 
             if (err) {
                 console.error('Error al marcar salida:', err);
-                return res.status(500).json({ error: 'Error al actualizar la salida de la visita' });
+                return res.status(500).json({
+                    error: 'Error al actualizar la salida de la visita'
+                });
             }
 
-            return res.json({ ok: true, mensaje: 'Salida marcada correctamente' });
+            return res.json({
+                ok: true,
+                mensaje: 'Salida marcada correctamente'
+            });
         });
     });
 });
+
+//VISITA ACTIVA POR CREDENCIAL PARA MOSTRAR ALERTA
 app.post('/obtener-visita-activa', (req, res) => {
-  const { credencial } = req.body;
+    const {
+        credencial
+    } = req.body;
 
-  if (!credencial) {
-    return res.status(400).json({ error: 'Falta credencial' });
-  }
-
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Conexión Firebird fallida:', err);
-      return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+    if (!credencial) {
+        return res.status(400).json({
+            error: 'Falta credencial'
+        });
     }
 
-    const sql = `
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({
+                error: 'Error de conexión a la base de datos'
+            });
+        }
+
+        const sql = `
       SELECT FIRST 1 * FROM VISITAS_FYTTSANET
       WHERE CREDENCIAL = ? AND ACTIVO = TRUE
     `;
 
-    db.query(sql, [credencial], (err, result) => {
-      db.detach();
+        db.query(sql, [credencial], (err, result) => {
+            db.detach();
 
-      if (err) {
-        console.error('Error al obtener visita activa:', err);
-        return res.status(500).json({ error: 'Error al consultar visita activa' });
-      }
+            if (err) {
+                console.error('Error al obtener visita activa:', err);
+                return res.status(500).json({
+                    error: 'Error al consultar visita activa'
+                });
+            }
 
-      if (result.length > 0) {
-        return res.json({ activa: true, visita: result[0] });
-      } else {
-        return res.json({ activa: false });
-      }
+            if (result.length > 0) {
+                return res.json({
+                    activa: true,
+                    visita: result[0]
+                });
+            } else {
+                return res.json({
+                    activa: false
+                });
+            }
+        });
     });
-  });
 });
-
+//VISITAS QUE YA FUERON MARCADAS COMO SALIDA
 app.get('/historial', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión' });
+            return res.status(500).json({
+                error: 'Error de conexión'
+            });
         }
 
         const sql = `
@@ -496,13 +654,391 @@ app.get('/historial', (req, res) => {
             db.detach();
             if (err) {
                 console.error('Error al consultar visitas activas:', err);
-                return res.status(500).json({ error: 'Error al obtener visitas' });
+                return res.status(500).json({
+                    error: 'Error al obtener visitas'
+                });
             }
 
             return res.json(result);
         });
     });
 });
+
+//OPERADORES
+app.get('/buscar-usuario', (req, res) => {
+    const searchQuery = req.query.query;
+
+    if (!searchQuery) {
+        return res.status(400).json({
+            error: 'Falta el parámetro de búsqueda'
+        });
+    }
+
+    const likeValue = `%${searchQuery.toString().toUpperCase()}%`;
+
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({
+                error: 'Error de conexión'
+            });
+        }
+
+        const sql = `
+          SELECT TRIM(UPPER(NOMBRE_COMPLETO)) AS NOMBRE_COMPLETO
+          FROM USUARIOS_LOG
+          WHERE UPPER(NOMBRE_COMPLETO) LIKE ?
+          ORDER BY NOMBRE_COMPLETO
+      `;
+
+        db.query(sql, [likeValue], (err, result) => {
+            db.detach();
+
+            if (err) {
+                console.error('Error al buscar usuario:', err);
+                return res.status(500).json({
+                    error: 'Error al consultar usuarios'
+                });
+            }
+
+            return res.json(result);
+        });
+    });
+});
+
+//CAPTURAR FOLIOS DE UN QR (VARIOS)
+app.get('/folio', (req, res) => {
+  const { folio } = req.query;
+  if (!folio) return res.status(400).json({ error: 'Folio es requerido' });
+
+  const match = folio.match(/^([A-Z]+)[0-9]+$/i);
+  if (!match) return res.status(400).json({ error: `Formato de folio inválido: ${folio}` });
+
+  const prefix = match[1].toUpperCase();
+
+  let sql = '';
+  let params = [folio];
+
+  switch (prefix) {
+    case 'ZAP':
+    case 'D':
+      sql = `
+        SELECT DISTINCT 
+          DP.FOLIO, 
+          CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DPD.CLAVE_ARTICULO, 
+          DPD.UNIDADES,
+          CL.NOMBRE,
+
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_PV DP
+        INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
+        WHERE DP.FOLIO = ?
+      `;
+      break;
+
+    case 'VMA':
+    case 'VMB':
+    case 'VMC':
+    case 'VMD':
+      sql = `
+        SELECT DISTINCT 
+          DV.FOLIO, 
+          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DVD.CLAVE_ARTICULO, 
+          DVD.UNIDADES,
+          CL.NOMBRE,
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_IN DV
+        INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+        WHERE DV.FOLIO = ?
+      `;
+      break;
+
+    case 'FCT':
+    case 'FPM':
+      sql = `
+        SELECT DISTINCT 
+          CL.CLIENTE_ID AS CLIENTE_ID, 
+          CL.NOMBRE, 
+          DCL.CALLE, 
+          DCL.COLONIA, 
+          DV.FOLIO,       
+          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DVD.CLAVE_ARTICULO,
+          DVD.UNIDADES,
+          DV.IMPORTE_NETO,
+          DV.TOTAL_IMPUESTOS,
+          (DV.IMPORTE_NETO + DV.TOTAL_IMPUESTOS) AS TOTAL,
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_VE DV
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+        INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
+        INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
+        WHERE DV.FOLIO = ?
+      `;
+      break;
+
+    case 'TC':
+    case 'TST':
+    case 'TVM':
+    case 'TSV':
+      sql = `
+        SELECT 
+          TI.DOCTO_IN_ID, 
+          TI.FOLIO, 
+          TD.CLAVE_ARTICULO,
+          TD.UNIDADES,
+          SUC.NOMBRE 
+        FROM TRASPASOS_IN TI
+        INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
+        LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
+        WHERE TI.FOLIO = ?
+      `;
+      break;
+
+    default:
+      return res.status(400).json({ error: `Prefijo de folio no reconocido: ${prefix}` });
+  }
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Conexión Firebird fallida:', err);
+      return res.status(500).json({ error: 'Error de conexión' });
+    }
+
+    db.query(sql, params, (err, result) => {
+      db.detach();
+      if (err) {
+        console.error(`Error al consultar FOLIO (${folio}):`, err);
+        return res.status(500).json({ error: 'Error al consultar FOLIO' });
+      }
+
+      return res.json(result);
+    });
+  });
+});
+
+//salida pero 1x1 
+app.post('/registrar-salida', (req, res) => { 
+  const { tipoDocumento, docInfo, operador, guardia } = req.body;
+  console.log('Body recibido en /registrar-salida:', req.body);
+
+  if (!tipoDocumento || !docInfo || !operador || !guardia) {
+    return res.status(400).json({ error: 'Faltan datos requeridos' });
+  }
+
+  const insertQuery = `
+    INSERT INTO FOLIOS_ENTREGA (
+      FOLIO,
+      NOMBRE_CLIENTE,
+      FECHA_SALIDA,
+      OPERADOR,
+      GUARDIA,
+      ESTADO
+    ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, 'PENDIENTE')
+  `;
+
+  const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
+                    : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
+                    : 'DOCTO_PV_ID';
+
+  const updateQuery = `
+    UPDATE CTRL_INF_ENV
+    SET PROCESO_ID = 5,
+        FECHA_PROC_5 = CURRENT_TIMESTAMP
+    WHERE DOCTO_ORIGEN_ID = ?
+  `;
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Error al conectar con Firebird:', err);
+      return res.status(500).json({ error: 'Error de conexión a Firebird' });
+    }
+
+    db.transaction(Firebird.ISOLATION_READ_COMMITTED, (err, transaction) => {
+      if (err) {
+        console.error('Error iniciando transacción:', err);
+        db.detach();
+        return res.status(500).json({ error: 'Error iniciando transacción' });
+      }
+
+      transaction.query(insertQuery, [
+        docInfo.FOLIO,
+        docInfo.NOMBRE_CLIENTE,
+        operador,
+        guardia
+      ], (err) => {
+        if (err) {
+          console.error('Error al insertar FOLIO:', err);
+          transaction.rollback(() => db.detach());
+          return res.status(500).json({ error: 'Error insertando FOLIO' });
+        }
+
+        const docId = docInfo[docIdField];
+
+        transaction.query(updateQuery, [docId], (err) => {
+          if (err) {
+            console.error('Error al actualizar documento:', err);
+            transaction.rollback(() => db.detach());
+            return res.status(500).json({ error: 'Error actualizando documento' });
+          }
+
+          transaction.commit((err) => {
+            if (err) {
+              console.error('Error al confirmar transacción:', err);
+              db.detach();
+              return res.status(500).json({ error: 'Error al confirmar transacción' });
+            }
+
+            db.detach(); 
+            return res.json({ success: true, message: 'Salida registrada exitosamente' });
+          });
+        });
+      });
+    });
+  });
+});
+
+//array de salidas para dar salida a varios documentos a la vez (en un solo grupo)
+app.post('/registrar-salida-multiple', (req, res) => {
+  const { registros } = req.body;
+
+  if (!Array.isArray(registros) || registros.length === 0) {
+    return res.status(400).json({ error: 'No se recibieron registros' });
+  }
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Error al conectar con Firebird:', err);
+      return res.status(500).json({ error: 'Error de conexión a Firebird' });
+    }
+
+    db.transaction(Firebird.ISOLATION_READ_COMMITTED, async (err, transaction) => {
+      if (err) {
+        console.error('Error iniciando transacción:', err);
+        db.detach();
+        return res.status(500).json({ error: 'Error iniciando transacción' });
+      }
+
+      try {
+        for (const item of registros) {
+          const { tipoDocumento, docInfo, operador, guardia } = item;
+
+          if (!tipoDocumento || !docInfo || !operador || !guardia) {
+            throw new Error('Faltan datos en uno de los registros');
+          }
+
+          const insertQuery = `
+            INSERT INTO FOLIOS_ENTREGA (
+              FOLIO, NOMBRE_CLIENTE, FECHA_SALIDA, OPERADOR, GUARDIA, ESTADO
+            ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, 'PENDIENTE')
+          `;
+
+          const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
+                              : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
+                              : 'DOCTO_PV_ID';
+
+          const docId = docInfo[docIdField];
+
+          const updateQuery = `
+            UPDATE CTRL_INF_ENV
+            SET PROCESO_ID = 5,
+                FECHA_PROC_5 = CURRENT_TIMESTAMP
+            WHERE DOCTO_ORIGEN_ID = ?
+          `;
+
+          await new Promise((resolve, reject) => {
+            transaction.query(insertQuery, [
+              docInfo.FOLIO,
+              docInfo.NOMBRE_CLIENTE,
+              operador,
+              guardia
+            ], (err) => err ? reject(err) : resolve());
+          });
+
+          await new Promise((resolve, reject) => {
+            transaction.query(updateQuery, [docId], (err) => err ? reject(err) : resolve());
+          });
+const numero = docInfo.TELEFONO1?.trim();
+const nombre = docInfo.NOMBRE_CLIENTE?.trim();
+const folioRaw = docInfo.FOLIO?.trim() || '';
+
+let folio = folioRaw;
+const match = folioRaw.match(/^([A-Z]+)(\d+)$/i);
+if (match) {
+  const letras = match[1];
+  const numeroFolio = parseInt(match[2], 10); 
+  folio = `${letras}${numeroFolio}`;
+}
+
+          if (numero && nombre && folio) {
+            const wasapiPayload = {
+              recipients: numero,
+              template_id: "ae2a4610-651f-4995-aa5a-f1a369d3b472",
+              contact_type: "phone",
+              from_id: 7857,
+              body_vars: [
+                { text: "{{1}}", val: nombre },
+                { text: "{{2}}", val: folio }
+              ],
+              chatbot_status: "disable",
+              conversation_status: "unchanged"
+            };
+
+            try {
+              const response = await globalThis.fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(wasapiPayload)
+              });
+
+              const data = await response.json();
+              console.log(` WhatsApp enviado a ${numero}:`, data);
+            } catch (err) {
+              console.error(`Error al enviar WhatsApp a ${numero}:`, err);
+            }
+          } else {
+            console.warn(`No se envió WhatsApp: datos incompletos (numero/nombre/folio)`);
+          }
+        }
+
+        transaction.commit((err) => {
+          if (err) {
+            console.error('Error al confirmar transacción:', err);
+            db.detach();
+            return res.status(500).json({ error: 'Error al confirmar transacción' });
+          }
+          db.detach();
+          return res.json({ success: true, message: 'Todas las salidas fueron registradas' });
+        });
+
+      } catch (e) {
+        console.error('Error procesando registros:', e);
+        transaction.rollback(() => db.detach());
+        return res.status(500).json({ error: e.message || 'Error al procesar los registros' });
+      }
+    });
+  });
+});
+
 
 
 //recibos: 
