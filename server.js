@@ -76,108 +76,246 @@ function obtenerRangoSemanal() {
     };
 }
 const COLABORADORES_POR_AREA = {
-  B2G: [
-    { nombre: "José Eduardo Trejo Aguilar", telefono: "5215580409415" },
-    { nombre: "Isidro Correa Rosales", telefono: "5215580058192" }
-  ],
+    B2G: [{
+        nombre: "José Eduardo Trejo Aguilar",
+        telefono: "5215580409415"
+    },
+    {
+        nombre: "Isidro Correa Rosales",
+        telefono: "5215580058192"
+    }
+    ],
 
-   CEDIS: [{ nombre: "Uriel Fuentes Negrete", telefono: "5215580081079" }],
-    COMERCIAL: [{ nombre: "Ivonne Espejel Navarro", telefono: "5215515292038" }],
-  COMEX: [
-    { nombre: "Raul Hernandez", telefono: "5215525154668" },
-    { nombre: "Erik Ramos", telefono: "5215513849706" },
-    { nombre: "Luis Rodrigo Urrutia Parra", telefono: "5215580058190" },
-    { nombre: "Sergio Moncayo Arcos", telefono: "5215580058194" },
-    { nombre: "Comex Tepexpan", telefono: "5215579079466" },
-  ],
-  CONTABILIDAD: [
-    { nombre: "Midory Elizabeth Cantellan Barrales", telefono: "5215519186598" },
-    { nombre: "Yanci Vargas", telefono: "5215619885095" },
-    { nombre: "Luis Fernando Cruz Hernandez", telefono: "521580058183" },
-    { nombre: "Jose De Jesus Cortes Badillo", telefono: "5215639602729" },
-    { nombre: "Ignacio Tovar Garfias", telefono: "5215562541648" },
-  ],
-  CxC: [
-    { nombre: "Jose Luis Lievano Hernandez", telefono: "5215515292079" },
-    { nombre: "Samuel Jimenez", telefono: "5215571862205" },
-    { nombre: "Estephanie Anguiano Castillo", telefono: "5215551993949" },
-  ],
-  DESARROLLO: [
-    { nombre: "Anahi Jasmin Bautista Gomez", telefono: "5215537571252" },
-    { nombre: "Teresa Dominguez", telefono: "5215511403981" },
-    { nombre: "Luis Daniel Luna Hernandez", telefono: "5215610204718" },
-    { nombre: "Joaquin Chacon", telefono: "5215581010843" },
-    { nombre: "Evelin Huerta Ocana", telefono: "5215580274770" },
-  ],
-  DIRECCIÓN: [
-    { nombre: "Jeroboam Sanchez Lopez", telefono: "5215526536608" },
-    { nombre: "Guillermo Sanchez", telefono: "5215580059964" },
-  ],
-  FLOTILLA: [{ nombre: "Carlos Caballero", telefono: "5215514452510" }],
-  INVENTARIOS: [
-    { nombre: "Miguel Angel Tolentino Pedraza", telefono: "5215580058187" },
-    { nombre: "Hector Ramirez", telefono: "5215580409314" },
-  ],
-  MANTENIMIENTO: [
-    { nombre: "Samuel Martinez", telefono: "5215575611800" },
-    { nombre: "Luis Angel Castellanos Vigueras", telefono: "5215515648223" },
-    { nombre: "Miguel Angel Coronel Calvo", telefono: "5215618569222" },
-  ],
-  MAYORISTA: [
-    { nombre: "Susana Lazcano Campos", telefono: "5215545100424" },
-    { nombre: "Uriel Torres", telefono: "5215554015539" },
-    { nombre: "J Mercedes Serrano Moreno", telefono: "5215579213456" },
-  ],
-  MERCADOTECNIA: [
-    { nombre: "Ruth Rebeca Fernandez Montoya", telefono: "5215576338433" },
-    { nombre: "Rubi Tovar", telefono: "5215951096570" },
-    { nombre: "Javier Hernandez Castillo", telefono: "5215529637383" },
-  ],
-  PDS: [
-    { nombre: "Marisol Vazquez Gallardo", telefono: "5215519099986" },
-    { nombre: "Paola Vazquez", telefono: "52155807076" },
-    { nombre: "Norma Espinoza Rojas", telefono: "5215619885100" },
-    { nombre: "Auric Saul Morales Hernandez", telefono: "5215662207015" },
-    { nombre: "Marco Jonathan Osorio De La Cruz", telefono: "5215563333115" },
+    CEDIS: [{
+        nombre: "Uriel Fuentes Negrete",
+        telefono: "5215580081079"
+    }],
+    COMERCIAL: [{
+        nombre: "Ivonne Espejel Navarro",
+        telefono: "5215515292038"
+    }],
+    COMEX: [{
+        nombre: "Raul Hernandez",
+        telefono: "5215525154668"
+    },
+    {
+        nombre: "Erik Ramos",
+        telefono: "5215513849706"
+    },
+    {
+        nombre: "Luis Rodrigo Urrutia Parra",
+        telefono: "5215580058190"
+    },
+    {
+        nombre: "Sergio Moncayo Arcos",
+        telefono: "5215580058194"
+    },
+    {
+        nombre: "Comex Tepexpan",
+        telefono: "5215579079466"
+    },
+    ],
+    CONTABILIDAD: [{
+        nombre: "Midory Elizabeth Cantellan Barrales",
+        telefono: "5215519186598"
+    },
+    {
+        nombre: "Yanci Vargas",
+        telefono: "5215619885095"
+    },
+    {
+        nombre: "Luis Fernando Cruz Hernandez",
+        telefono: "521580058183"
+    },
+    {
+        nombre: "Jose De Jesus Cortes Badillo",
+        telefono: "5215639602729"
+    },
+    {
+        nombre: "Ignacio Tovar Garfias",
+        telefono: "5215562541648"
+    },
+    ],
+    CxC: [{
+        nombre: "Jose Luis Lievano Hernandez",
+        telefono: "5215515292079"
+    },
+    {
+        nombre: "Samuel Jimenez",
+        telefono: "5215571862205"
+    },
+    {
+        nombre: "Estephanie Anguiano Castillo",
+        telefono: "5215551993949"
+    },
+    ],
+    DESARROLLO: [{
+        nombre: "Anahi Jasmin Bautista Gomez",
+        telefono: "5215537571252"
+    },
+    {
+        nombre: "Teresa Dominguez",
+        telefono: "5215511403981"
+    },
+    {
+        nombre: "Luis Daniel Luna Hernandez",
+        telefono: "5215610204718"
+    },
+    {
+        nombre: "Joaquin Chacon",
+        telefono: "5215581010843"
+    },
+    {
+        nombre: "Evelin Huerta Ocana",
+        telefono: "5215580274770"
+    },
+    ],
+    DIRECCIÓN: [{
+        nombre: "Jeroboam Sanchez Lopez",
+        telefono: "5215526536608"
+    },
+    {
+        nombre: "Guillermo Sanchez",
+        telefono: "5215580059964"
+    },
+    ],
+    FLOTILLA: [{
+        nombre: "Carlos Caballero",
+        telefono: "5215514452510"
+    }],
+    INVENTARIOS: [{
+        nombre: "Miguel Angel Tolentino Pedraza",
+        telefono: "5215580058187"
+    },
+    {
+        nombre: "Hector Ramirez",
+        telefono: "5215580409314"
+    },
+    ],
+    MANTENIMIENTO: [{
+        nombre: "Samuel Martinez",
+        telefono: "5215575611800"
+    },
+    {
+        nombre: "Luis Angel Castellanos Vigueras",
+        telefono: "5215515648223"
+    },
+    {
+        nombre: "Miguel Angel Coronel Calvo",
+        telefono: "5215618569222"
+    },
+    ],
+    MAYORISTA: [{
+        nombre: "Susana Lazcano Campos",
+        telefono: "5215545100424"
+    },
+    {
+        nombre: "Uriel Torres",
+        telefono: "5215554015539"
+    },
+    {
+        nombre: "J Mercedes Serrano Moreno",
+        telefono: "5215579213456"
+    },
+    ],
+    MERCADOTECNIA: [{
+        nombre: "Ruth Rebeca Fernandez Montoya",
+        telefono: "5215576338433"
+    },
+    {
+        nombre: "Rubi Tovar",
+        telefono: "5215951096570"
+    },
+    {
+        nombre: "Javier Hernandez Castillo",
+        telefono: "5215529637383"
+    },
+    ],
+    PDS: [{
+        nombre: "Marisol Vazquez Gallardo",
+        telefono: "5215519099986"
+    },
+    {
+        nombre: "Paola Vazquez",
+        telefono: "52155807076"
+    },
+    {
+        nombre: "Norma Espinoza Rojas",
+        telefono: "5215619885100"
+    },
+    {
+        nombre: "Auric Saul Morales Hernandez",
+        telefono: "5215662207015"
+    },
+    {
+        nombre: "Marco Jonathan Osorio De La Cruz",
+        telefono: "5215563333115"
+    },
 
-  ],
-  PROGRAMACIÓN: [
-    { nombre: "Jorge Alfredo Jones Spindola", telefono: "5215534161524" },
-    { nombre: "Celeste Guadalupe Zenteno Roldan", telefono: "5215560410509" },
-    { nombre: "Daniel Garcia", telefono: "5215637803290" },
-    { nombre: "Jonathan Noe Gallardo Villegas", telefono: "5215641138710" },
-    { nombre: "Diego Mauricio Ramos Cordova", telefono: "5215665596672" },
-  ],
-  RETAIL: [
-    { nombre: "Jennifer Salazar Salamanca", telefono: "5215544788591" },
-    { nombre: "Maria Guadalupe Contreras Cruz", telefono: "5215566773395" },
-    { nombre: "Arandi Ramirez", telefono: "5215569720764" },
-  ],
-  SEGURIDAD: [
-    { nombre: "C B", telefono: "5215625595483" },
-    { nombre: "Cerevro DFR", telefono: "5215612660130" },
-    { nombre: "C A", telefono: "5215625595483" },
-  ],
-  SAC: [
-    { nombre: "Sheilin Calete", telefono: "5215563228516" },
-  ],
-  SISTEMAS: [
-    { nombre: "Ivan Rios", telefono: "5215518497251" },
-    { nombre: "Isaac Cortes", telefono: "5215547644716" },
-  ],
- GOBIERNO: [
-    { nombre: "Valeria", telefono: "5215528249961" },
-    { nombre: "Norma Espinoza", telefono: "5215619885100" },
-    { nombre: "Ana", telefono: "5215579222636" },
-    { nombre: "Emannuel Hernandez", telefono: "5215580285476" },
-    { nombre: "Javier", telefono: "5215516030811" },
-
-  ],
-    EDIFICACION: [{ nombre: "Pedro", telefono: "5215575352255" }],
+    ],
+    PROGRAMACIÓN: [{
+        nombre: "Jorge Alfredo Jones Spindola",
+        telefono: "5215534161524"
+    },
+    {
+        nombre: "Celeste Guadalupe Zenteno Roldan",
+        telefono: "5215560410509"
+    },
+    {
+        nombre: "Daniel Garcia",
+        telefono: "5215637803290"
+    },
+    {
+        nombre: "Jonathan Noe Gallardo Villegas",
+        telefono: "5215641138710"
+    },
+    {
+        nombre: "Diego Mauricio Ramos Cordova",
+        telefono: "5215665596672"
+    },
+    ],
+    RETAIL: [{
+        nombre: "Jennifer Salazar Salamanca",
+        telefono: "5215544788591"
+    },
+    {
+        nombre: "Maria Guadalupe Contreras Cruz",
+        telefono: "5215566773395"
+    },
+    {
+        nombre: "Arandi Ramirez",
+        telefono: "5215569720764"
+    },
+    ],
+    SEGURIDAD: [{
+        nombre: "C B",
+        telefono: "5215625595483"
+    },
+    {
+        nombre: "Cerevro DFR",
+        telefono: "5215612660130"
+    },
+    {
+        nombre: "C A",
+        telefono: "5215625595483"
+    },
+    ],
+    SAC: [{
+        nombre: "Sheilin Calete",
+        telefono: "5215563228516"
+    },],
+    SISTEMAS: [{
+        nombre: "Ivan Rios",
+        telefono: "5215518497251"
+    },
+    {
+        nombre: "Isaac Cortes",
+        telefono: "5215547644716"
+    },
+    ],
 
 };
 //SEGURIDAD
-
 app.post('/login-seguridad', (req, res) => {
     const {
         usuario,
@@ -294,7 +432,7 @@ app.post('/registrar-visita', (req, res) => {
                 recipients: colaborador.telefono,
                 template_id: 'e5602145-7741-48aa-9b59-26a6bfe559a1',
                 contact_type: 'phone',
-                from_id: 7857, 
+                from_id: 7857,
                 body_vars: [{
                     text: '{{1}}',
                     val: nombre
@@ -304,13 +442,13 @@ app.post('/registrar-visita', (req, res) => {
             };
 
             fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(whatsappPayload)
-                })
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(whatsappPayload)
+            })
                 .then(response => response.json())
                 .then(data => {
                     console.log('WhatsApp enviado:', data);
@@ -708,21 +846,21 @@ app.get('/buscar-usuario', (req, res) => {
 
 //CAPTURAR FOLIOS DE UN QR (VARIOS)
 app.get('/folio', (req, res) => {
-  const { folio } = req.query;
-  if (!folio) return res.status(400).json({ error: 'Folio es requerido' });
+    const { folio } = req.query;
+    if (!folio) return res.status(400).json({ error: 'Folio es requerido' });
 
-  const match = folio.match(/^([A-Z]+)[0-9]+$/i);
-  if (!match) return res.status(400).json({ error: `Formato de folio inválido: ${folio}` });
+    const match = folio.match(/^([A-Z]+)[0-9]+$/i);
+    if (!match) return res.status(400).json({ error: `Formato de folio inválido: ${folio}` });
 
-  const prefix = match[1].toUpperCase();
+    const prefix = match[1].toUpperCase();
 
-  let sql = '';
-  let params = [folio];
+    let sql = '';
+    let params = [folio];
 
-  switch (prefix) {
-    case 'ZAP':
-    case 'D':
-      sql = `
+    switch (prefix) {
+        case 'ZAP':
+        case 'D':
+            sql = `
         SELECT DISTINCT 
           DP.FOLIO, 
           CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
@@ -740,13 +878,13 @@ app.get('/folio', (req, res) => {
         INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
         WHERE DP.FOLIO = ?
       `;
-      break;
+            break;
 
-    case 'VMA':
-    case 'VMB':
-    case 'VMC':
-    case 'VMD':
-      sql = `
+        case 'VMA':
+        case 'VMB':
+        case 'VMC':
+        case 'VMD':
+            sql = `
         SELECT DISTINCT 
           DV.FOLIO, 
           CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
@@ -763,11 +901,15 @@ app.get('/folio', (req, res) => {
         INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
         WHERE DV.FOLIO = ?
       `;
-      break;
+            break;
 
-    case 'FCT':
-    case 'FPM':
-      sql = `
+        case 'FCT':
+        case 'FPM':
+        case 'PC':
+        case 'PPM':
+
+
+            sql = `
         SELECT DISTINCT 
           CL.CLIENTE_ID AS CLIENTE_ID, 
           CL.NOMBRE, 
@@ -791,13 +933,13 @@ app.get('/folio', (req, res) => {
         INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
         WHERE DV.FOLIO = ?
       `;
-      break;
+            break;
 
-    case 'TC':
-    case 'TST':
-    case 'TVM':
-    case 'TSV':
-      sql = `
+        case 'TC':
+        case 'TST':
+        case 'TVM':
+        case 'TSV':
+            sql = `
         SELECT 
           TI.DOCTO_IN_ID, 
           TI.FOLIO, 
@@ -809,40 +951,182 @@ app.get('/folio', (req, res) => {
         LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
         WHERE TI.FOLIO = ?
       `;
-      break;
+            break;
 
-    default:
-      return res.status(400).json({ error: `Prefijo de folio no reconocido: ${prefix}` });
-  }
-
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Conexión Firebird fallida:', err);
-      return res.status(500).json({ error: 'Error de conexión' });
+        default:
+            return res.status(400).json({ error: `Prefijo de folio no reconocido: ${prefix}` });
     }
 
-    db.query(sql, params, (err, result) => {
-      db.detach();
-      if (err) {
-        console.error(`Error al consultar FOLIO (${folio}):`, err);
-        return res.status(500).json({ error: 'Error al consultar FOLIO' });
-      }
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión' });
+        }
 
-      return res.json(result);
+        db.query(sql, params, (err, result) => {
+            db.detach();
+            if (err) {
+                console.error(`Error al consultar FOLIO (${folio}):`, err);
+                return res.status(500).json({ error: 'Error al consultar FOLIO' });
+            }
+
+            return res.json(result);
+        });
     });
-  });
+});
+app.post('/folios', (req, res) => {
+    const { folios } = req.body;
+
+    if (!Array.isArray(folios) || folios.length === 0) {
+        return res.status(400).json({ error: 'Se requiere un arreglo de folios' });
+    }
+
+    const resultados = [];
+    let pendientes = folios.length;
+    let errores = [];
+
+    folios.forEach((folio) => {
+        const match = folio.match(/^([A-Z]+)[0-9]+$/i);
+        if (!match) {
+            errores.push({ folio, error: 'Formato inválido' });
+            if (--pendientes === 0) responder();
+            return;
+        }
+
+        const prefix = match[1].toUpperCase();
+        let sql = '';
+        let params = [folio];
+
+        switch (prefix) {
+            case 'ZAP':
+            case 'D':
+                sql = `SELECT DISTINCT 
+          DP.FOLIO, 
+          CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DPD.CLAVE_ARTICULO, 
+          DPD.UNIDADES,
+          CL.NOMBRE,
+
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_PV DP
+        INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
+        WHERE DP.FOLIO = ?`; // misma consulta que ya tienes
+                break;
+
+            case 'VMA':
+            case 'VMB':
+            case 'VMC':
+            case 'VMD':
+                sql = `SELECT DISTINCT 
+          DV.FOLIO, 
+          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DVD.CLAVE_ARTICULO, 
+          DVD.UNIDADES,
+          CL.NOMBRE,
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_IN DV
+        INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+        WHERE DV.FOLIO = ?`;
+                break;
+
+            case 'FCT':
+            case 'FPM':
+            case 'PC':
+            case 'PPM':
+
+                sql = `SELECT DISTINCT 
+          CL.CLIENTE_ID AS CLIENTE_ID, 
+          CL.NOMBRE, 
+          DCL.CALLE, 
+          DCL.COLONIA, 
+          DV.FOLIO,       
+          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+          DVD.CLAVE_ARTICULO,
+          DVD.UNIDADES,
+          DV.IMPORTE_NETO,
+          DV.TOTAL_IMPUESTOS,
+          (DV.IMPORTE_NETO + DV.TOTAL_IMPUESTOS) AS TOTAL,
+          (
+            SELECT FIRST 1 DC.TELEFONO1
+            FROM DIRS_CLIENTES DC
+            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+          ) AS TELEFONO1
+        FROM DOCTOS_VE DV
+        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+        INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
+        INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
+        WHERE DV.FOLIO = ?`;
+                break;
+
+            case 'TC':
+            case 'TST':
+            case 'TVM':
+            case 'TSV':
+                sql = ` SELECT 
+          TI.DOCTO_IN_ID, 
+          TI.FOLIO, 
+          TD.CLAVE_ARTICULO,
+          TD.UNIDADES,
+          SUC.NOMBRE 
+        FROM TRASPASOS_IN TI
+        INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
+        LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
+        WHERE TI.FOLIO = ?`; // misma consulta traspasos
+                break;
+
+            default:
+                errores.push({ folio, error: `Prefijo no reconocido: ${prefix}` });
+                if (--pendientes === 0) responder();
+                return;
+        }
+
+        Firebird.attach(firebirdConfig, (err, db) => {
+            if (err) {
+                errores.push({ folio, error: 'Error de conexión' });
+                if (--pendientes === 0) responder();
+                return;
+            }
+
+            db.query(sql, params, (err, result) => {
+                db.detach();
+                if (err) {
+                    errores.push({ folio, error: 'Error al consultar' });
+                } else {
+                    result.forEach(r => {
+                        resultados.push({ ...r, FOLIO_ORIGINAL: folio });
+                    });
+                }
+
+                if (--pendientes === 0) responder();
+            });
+        });
+    });
+
+    function responder() {
+        res.json({ datos: resultados, errores });
+    }
 });
 
 //salida pero 1x1 
-app.post('/registrar-salida', (req, res) => { 
-  const { tipoDocumento, docInfo, operador, guardia } = req.body;
-  console.log('Body recibido en /registrar-salida:', req.body);
+app.post('/registrar-salida', (req, res) => {
+    const { tipoDocumento, docInfo, operador, guardia } = req.body;
+    console.log('Body recibido en /registrar-salida:', req.body);
 
-  if (!tipoDocumento || !docInfo || !operador || !guardia) {
-    return res.status(400).json({ error: 'Faltan datos requeridos' });
-  }
+    if (!tipoDocumento || !docInfo || !operador || !guardia) {
+        return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
 
-  const insertQuery = `
+    const insertQuery = `
     INSERT INTO FOLIOS_ENTREGA (
       FOLIO,
       NOMBRE_CLIENTE,
@@ -853,191 +1137,192 @@ app.post('/registrar-salida', (req, res) => {
     ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, 'PENDIENTE')
   `;
 
-  const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
-                    : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
-                    : 'DOCTO_PV_ID';
+    const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
+        : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
+            : 'DOCTO_PV_ID';
 
-  const updateQuery = `
+    const updateQuery = `
     UPDATE CTRL_INF_ENV
     SET PROCESO_ID = 5,
         FECHA_PROC_5 = CURRENT_TIMESTAMP
     WHERE DOCTO_ORIGEN_ID = ?
   `;
 
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Error al conectar con Firebird:', err);
-      return res.status(500).json({ error: 'Error de conexión a Firebird' });
-    }
-
-    db.transaction(Firebird.ISOLATION_READ_COMMITTED, (err, transaction) => {
-      if (err) {
-        console.error('Error iniciando transacción:', err);
-        db.detach();
-        return res.status(500).json({ error: 'Error iniciando transacción' });
-      }
-
-      transaction.query(insertQuery, [
-        docInfo.FOLIO,
-        docInfo.NOMBRE_CLIENTE,
-        operador,
-        guardia
-      ], (err) => {
+    Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
-          console.error('Error al insertar FOLIO:', err);
-          transaction.rollback(() => db.detach());
-          return res.status(500).json({ error: 'Error insertando FOLIO' });
+            console.error('Error al conectar con Firebird:', err);
+            return res.status(500).json({ error: 'Error de conexión a Firebird' });
         }
 
-        const docId = docInfo[docIdField];
-
-        transaction.query(updateQuery, [docId], (err) => {
-          if (err) {
-            console.error('Error al actualizar documento:', err);
-            transaction.rollback(() => db.detach());
-            return res.status(500).json({ error: 'Error actualizando documento' });
-          }
-
-          transaction.commit((err) => {
+        db.transaction(Firebird.ISOLATION_READ_COMMITTED, (err, transaction) => {
             if (err) {
-              console.error('Error al confirmar transacción:', err);
-              db.detach();
-              return res.status(500).json({ error: 'Error al confirmar transacción' });
+                console.error('Error iniciando transacción:', err);
+                db.detach();
+                return res.status(500).json({ error: 'Error iniciando transacción' });
             }
 
-            db.detach(); 
-            return res.json({ success: true, message: 'Salida registrada exitosamente' });
-          });
+            transaction.query(insertQuery, [
+                docInfo.FOLIO,
+                docInfo.NOMBRE_CLIENTE,
+                operador,
+                guardia
+            ], (err) => {
+                if (err) {
+                    console.error('Error al insertar FOLIO:', err);
+                    transaction.rollback(() => db.detach());
+                    return res.status(500).json({ error: 'Error insertando FOLIO' });
+                }
+
+                const docId = docInfo[docIdField];
+
+                transaction.query(updateQuery, [docId], (err) => {
+                    if (err) {
+                        console.error('Error al actualizar documento:', err);
+                        transaction.rollback(() => db.detach());
+                        return res.status(500).json({ error: 'Error actualizando documento' });
+                    }
+
+                    transaction.commit((err) => {
+                        if (err) {
+                            console.error('Error al confirmar transacción:', err);
+                            db.detach();
+                            return res.status(500).json({ error: 'Error al confirmar transacción' });
+                        }
+
+                        db.detach();
+                        return res.json({ success: true, message: 'Salida registrada exitosamente' });
+                    });
+                });
+            });
         });
-      });
     });
-  });
 });
 
 //array de salidas para dar salida a varios documentos a la vez (en un solo grupo)
 app.post('/registrar-salida-multiple', (req, res) => {
-  const { registros } = req.body;
+    const { registros } = req.body;
 
-  if (!Array.isArray(registros) || registros.length === 0) {
-    return res.status(400).json({ error: 'No se recibieron registros' });
-  }
-
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Error al conectar con Firebird:', err);
-      return res.status(500).json({ error: 'Error de conexión a Firebird' });
+    if (!Array.isArray(registros) || registros.length === 0) {
+        return res.status(400).json({ error: 'No se recibieron registros' });
     }
 
-    db.transaction(Firebird.ISOLATION_READ_COMMITTED, async (err, transaction) => {
-      if (err) {
-        console.error('Error iniciando transacción:', err);
-        db.detach();
-        return res.status(500).json({ error: 'Error iniciando transacción' });
-      }
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Error al conectar con Firebird:', err);
+            return res.status(500).json({ error: 'Error de conexión a Firebird' });
+        }
 
-      try {
-        for (const item of registros) {
-          const { tipoDocumento, docInfo, operador, guardia } = item;
+        db.transaction(Firebird.ISOLATION_READ_COMMITTED, async (err, transaction) => {
+            if (err) {
+                console.error('Error iniciando transacción:', err);
+                db.detach();
+                return res.status(500).json({ error: 'Error iniciando transacción' });
+            }
 
-          if (!tipoDocumento || !docInfo || !operador || !guardia) {
-            throw new Error('Faltan datos en uno de los registros');
-          }
+            try {
+                for (const item of registros) {
+                    const { tipoDocumento, docInfo, operador, guardia } = item;
 
-          const insertQuery = `
+                    if (!tipoDocumento || !docInfo || !operador || !guardia) {
+                        throw new Error('Faltan datos en uno de los registros');
+                    }
+
+                    const insertQuery = `
             INSERT INTO FOLIOS_ENTREGA (
               FOLIO, NOMBRE_CLIENTE, FECHA_SALIDA, OPERADOR, GUARDIA, ESTADO
             ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, 'PENDIENTE')
           `;
 
-          const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
-                              : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
-                              : 'DOCTO_PV_ID';
+                    const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
+                        : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
+                            : 'DOCTO_PV_ID';
 
-          const docId = docInfo[docIdField];
+                    const docId = docInfo[docIdField];
 
-          const updateQuery = `
+                    const updateQuery = `
             UPDATE CTRL_INF_ENV
             SET PROCESO_ID = 5,
                 FECHA_PROC_5 = CURRENT_TIMESTAMP
             WHERE DOCTO_ORIGEN_ID = ?
           `;
 
-          await new Promise((resolve, reject) => {
-            transaction.query(insertQuery, [
-              docInfo.FOLIO,
-              docInfo.NOMBRE_CLIENTE,
-              operador,
-              guardia
-            ], (err) => err ? reject(err) : resolve());
-          });
+                    await new Promise((resolve, reject) => {
+                        transaction.query(insertQuery, [
+                            docInfo.FOLIO,
+                            docInfo.NOMBRE_CLIENTE,
+                            operador,
+                            guardia
+                        ], (err) => err ? reject(err) : resolve());
+                    });
 
-          await new Promise((resolve, reject) => {
-            transaction.query(updateQuery, [docId], (err) => err ? reject(err) : resolve());
-          });
-const numero = docInfo.TELEFONO1?.trim();
-const nombre = docInfo.NOMBRE_CLIENTE?.trim();
-const folioRaw = docInfo.FOLIO?.trim() || '';
+                    await new Promise((resolve, reject) => {
+                        transaction.query(updateQuery, [docId], (err) => err ? reject(err) : resolve());
+                    });
+                    const numero = docInfo.TELEFONO1?.trim();
+                    const nombre = docInfo.NOMBRE_CLIENTE?.trim();
+                    const folioRaw = docInfo.FOLIO?.trim() || '';
 
-let folio = folioRaw;
-const match = folioRaw.match(/^([A-Z]+)(\d+)$/i);
-if (match) {
-  const letras = match[1];
-  const numeroFolio = parseInt(match[2], 10); 
-  folio = `${letras}${numeroFolio}`;
-}
+                    let folio = folioRaw;
+                    const match = folioRaw.match(/^([A-Z]+)(\d+)$/i);
+                    if (match) {
+                        const letras = match[1];
+                        const numeroFolio = parseInt(match[2], 10);
+                        folio = `${letras}${numeroFolio}`;
+                    }
 
-          if (numero && nombre && folio) {
-            const wasapiPayload = {
-              recipients: numero,
-              template_id: "ae2a4610-651f-4995-aa5a-f1a369d3b472",
-              contact_type: "phone",
-              from_id: 7857,
-              body_vars: [
-                { text: "{{1}}", val: nombre },
-                { text: "{{2}}", val: folio }
-              ],
-              chatbot_status: "disable",
-              conversation_status: "unchanged"
-            };
+                    if (numero && nombre && folio) {
+                        const wasapiPayload = {
+                            recipients: numero,
+                            template_id: "ae2a4610-651f-4995-aa5a-f1a369d3b472",
+                            contact_type: "phone",
+                            from_id: 7857,
+                            body_vars: [
+                                { text: "{{1}}", val: nombre },
+                                { text: "{{2}}", val: folio }
+                            ],
+                            chatbot_status: "disable",
+                            conversation_status: "unchanged"
+                        };
 
-            try {
-              const response = await globalThis.fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
-                method: 'POST',
-                headers: {
-                  'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(wasapiPayload)
-              });
+                        try {
+                            const response = await globalThis.fetch('https://api.wasapi.io/prod/api/v1/whatsapp-messages/send-template', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer 12724|csP77b05JMVWwjuJw7fKgUxQRmh5RpYxx1sPO4Cw',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(wasapiPayload)
+                            });
 
-              const data = await response.json();
-              console.log(` WhatsApp enviado a ${numero}:`, data);
-            } catch (err) {
-              console.error(`Error al enviar WhatsApp a ${numero}:`, err);
+                            const data = await response.json();
+                            console.log(` WhatsApp enviado a ${numero}:`, data);
+                        } catch (err) {
+                            console.error(`Error al enviar WhatsApp a ${numero}:`, err);
+                        }
+                    } else {
+                        console.warn(`No se envió WhatsApp: datos incompletos (numero/nombre/folio)`);
+                    }
+                }
+
+                transaction.commit((err) => {
+                    if (err) {
+                        console.error('Error al confirmar transacción:', err);
+                        db.detach();
+                        return res.status(500).json({ error: 'Error al confirmar transacción' });
+                    }
+                    db.detach();
+                    return res.json({ success: true, message: 'Todas las salidas fueron registradas' });
+                });
+
+            } catch (e) {
+                console.error('Error procesando registros:', e);
+                transaction.rollback(() => db.detach());
+                return res.status(500).json({ error: e.message || 'Error al procesar los registros' });
             }
-          } else {
-            console.warn(`No se envió WhatsApp: datos incompletos (numero/nombre/folio)`);
-          }
-        }
-
-        transaction.commit((err) => {
-          if (err) {
-            console.error('Error al confirmar transacción:', err);
-            db.detach();
-            return res.status(500).json({ error: 'Error al confirmar transacción' });
-          }
-          db.detach();
-          return res.json({ success: true, message: 'Todas las salidas fueron registradas' });
         });
-
-      } catch (e) {
-        console.error('Error procesando registros:', e);
-        transaction.rollback(() => db.detach());
-        return res.status(500).json({ error: e.message || 'Error al procesar los registros' });
-      }
     });
-  });
 });
+
 
 
 
