@@ -856,29 +856,28 @@ app.get('/folio', (req, res) => {
     const prefix = match[1].toUpperCase();
 
     let sql = '';
-    let params = [folio];
+    const params = [folio];
 
     switch (prefix) {
         case 'ZAP':
         case 'D':
             sql = `
-        SELECT DISTINCT 
-          DP.FOLIO, 
-          CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DPD.CLAVE_ARTICULO, 
-          DPD.UNIDADES,
-          CL.NOMBRE,
-
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_PV DP
-        INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
-        WHERE DP.FOLIO = ?
-      `;
+                SELECT DISTINCT 
+                    DP.FOLIO, 
+                    CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+                    DPD.CLAVE_ARTICULO, 
+                    DPD.UNIDADES,
+                    CL.NOMBRE,
+                    (
+                        SELECT FIRST 1 DC.TELEFONO1
+                        FROM DIRS_CLIENTES DC
+                        WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+                    ) AS TELEFONO1
+                FROM DOCTOS_PV DP
+                INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
+                INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
+                WHERE DP.FOLIO = ?
+            `;
             break;
 
         case 'VMA':
@@ -886,54 +885,52 @@ app.get('/folio', (req, res) => {
         case 'VMC':
         case 'VMD':
             sql = `
-        SELECT DISTINCT 
-          DV.FOLIO, 
-          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DVD.CLAVE_ARTICULO, 
-          DVD.UNIDADES,
-          CL.NOMBRE,
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_IN DV
-        INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
-        WHERE DV.FOLIO = ?
-      `;
+                SELECT DISTINCT 
+                    DV.FOLIO, 
+                    CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+                    DVD.CLAVE_ARTICULO, 
+                    DVD.UNIDADES,
+                    CL.NOMBRE,
+                    (
+                        SELECT FIRST 1 DC.TELEFONO1
+                        FROM DIRS_CLIENTES DC
+                        WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+                    ) AS TELEFONO1
+                FROM DOCTOS_IN DV
+                INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
+                INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+                WHERE DV.FOLIO = ?
+            `;
             break;
 
         case 'FCT':
-        case 'FPM':
         case 'PC':
         case 'PPM':
-
-
+        case 'FPM':
             sql = `
-        SELECT DISTINCT 
-          CL.CLIENTE_ID AS CLIENTE_ID, 
-          CL.NOMBRE, 
-          DCL.CALLE, 
-          DCL.COLONIA, 
-          DV.FOLIO,       
-          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DVD.CLAVE_ARTICULO,
-          DVD.UNIDADES,
-          DV.IMPORTE_NETO,
-          DV.TOTAL_IMPUESTOS,
-          (DV.IMPORTE_NETO + DV.TOTAL_IMPUESTOS) AS TOTAL,
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_VE DV
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
-        INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
-        INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
-        WHERE DV.FOLIO = ?
-      `;
+                SELECT DISTINCT 
+                    CL.CLIENTE_ID AS CLIENTE_ID, 
+                    CL.NOMBRE, 
+                    DCL.CALLE, 
+                    DCL.COLONIA, 
+                    DV.FOLIO,       
+                    CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
+                    DVD.CLAVE_ARTICULO,
+                    DVD.UNIDADES,
+                    DV.IMPORTE_NETO,
+                    DV.TOTAL_IMPUESTOS,
+                    (DV.IMPORTE_NETO + DV.TOTAL_IMPUESTOS) AS TOTAL,
+                    (
+                        SELECT FIRST 1 DC.TELEFONO1
+                        FROM DIRS_CLIENTES DC
+                        WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+                    ) AS TELEFONO1
+                FROM DOCTOS_VE DV
+                INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+                INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
+                INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
+                WHERE DV.FOLIO = ?
+            `;
             break;
 
         case 'TC':
@@ -941,17 +938,17 @@ app.get('/folio', (req, res) => {
         case 'TVM':
         case 'TSV':
             sql = `
-        SELECT 
-          TI.DOCTO_IN_ID, 
-          TI.FOLIO, 
-          TD.CLAVE_ARTICULO,
-          TD.UNIDADES,
-          SUC.NOMBRE 
-        FROM TRASPASOS_IN TI
-        INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
-        LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
-        WHERE TI.FOLIO = ?
-      `;
+                SELECT 
+                    TI.DOCTO_IN_ID, 
+                    TI.FOLIO, 
+                    TD.CLAVE_ARTICULO,
+                    TD.UNIDADES,
+                    SUC.NOMBRE 
+                FROM TRASPASOS_IN TI
+                INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
+                LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
+                WHERE TI.FOLIO = ?
+            `;
             break;
 
         default:
@@ -961,17 +958,75 @@ app.get('/folio', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión' });
+            return res.status(500).json({ error: 'Error de conexión a base de datos' });
         }
 
         db.query(sql, params, (err, result) => {
-            db.detach();
             if (err) {
+                db.detach();
                 console.error(`Error al consultar FOLIO (${folio}):`, err);
                 return res.status(500).json({ error: 'Error al consultar FOLIO' });
             }
 
-            return res.json(result);
+            res.json(result);
+
+            // Inserción condicional para FPM en CTRL_INF_ENV
+            if (prefix === 'FPM') {
+                db.query('SELECT DOCTO_VE_ID FROM DOCTOS_VE WHERE FOLIO = ?', [folio], (err, docRes) => {
+                    if (err || !docRes.length) {
+                        console.error('Error obteniendo DOCTO_VE_ID para FPM:', err);
+                        db.detach();
+                        return;
+                    }
+
+                    const doctoVeId = docRes[0].DOCTO_VE_ID;
+
+                    // Verificar si ya existe un registro
+                    const checkSql = `
+                        SELECT 1 FROM CTRL_INF_ENV
+                        WHERE DOCTO_DEST_ID = ? AND PROCESO_ID = 5
+                    `;
+
+                    db.query(checkSql, [doctoVeId], (checkErr, checkRes) => {
+                        if (checkErr) {
+                            console.error('Error verificando duplicado en CTRL_INF_ENV:', checkErr);
+                            db.detach();
+                            return;
+                        }
+
+                        if (checkRes.length > 0) {
+                            console.log(`Ya existe registro en CTRL_INF_ENV para DOCTO_DEST_ID = ${doctoVeId}`);
+                            db.detach();
+                            return;
+                        }
+
+                        const insertSql = `
+                            INSERT INTO CTRL_INF_ENV (
+                                SISTEMA,
+                                DOCTO_ORIGEN_ID,
+                                DOCTO_DEST_ID,
+                                PROCESO_ID,
+                                FECHA_PROC_2,
+                                FECHA_PROC_3,
+                                FECHA_PROC_4,
+                                FECHA_PROC_5,
+                                FECHA_PROC_6
+                            ) VALUES (?, NULL, ?, ?, NULL, NULL, NULL, CURRENT_DATE, NULL)
+                        `;
+
+                        db.query(insertSql, ['PM', doctoVeId, 5], (insertErr) => {
+                            db.detach();
+                            if (insertErr) {
+                                console.error('Error insertando en CTRL_INF_ENV:', insertErr);
+                            } else {
+                                console.log(`Insert realizado en CTRL_INF_ENV para FPM: DOCTO_DEST_ID = ${doctoVeId}`);
+                            }
+                        });
+                    });
+                });
+            } else {
+                db.detach();
+            }
         });
     });
 });
