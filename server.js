@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const Firebird = require('node-firebird');
+
 const {
     fileTypeFromBuffer
 } = require('file-type');
@@ -19,14 +20,14 @@ const firebirdConfig = {
     host: '85.215.109.213',
     port: 3050,
     database: 'D:\\Microsip datos\\GUIMAR.FDB',
+    // database: 'D:\\Microsip datos\\GUIMARTEST.FDB',
     user: 'SYSDBA',
     password: 'BlueMamut$23',
     lowercase_keys: false,
     role: null,
     pageSize: 4096,
-    // timelife: 25,
+    timelife: 60000,
 };
-
 
 function readBlob(blob) {
     return new Promise((resolve, reject) => {
@@ -1116,6 +1117,7 @@ app.post('/folios', (req, res) => {
         res.json({ datos: resultados, errores });
     }
 });
+
 
 //salida pero 1x1 
 app.post('/registrar-salida', (req, res) => {
