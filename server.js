@@ -1416,20 +1416,9 @@ app.post('/consulta-recibos', (req, res) => {
             const traspaso = result[0]; // Tiene TRASPASO_IN_ID
 
             const detallesQuery = `
-               SELECT 
-  TID.CLAVE_ARTICULO, 
-  A.NOMBRE, 
-  TD.SURTIDAS AS UNIDADES, 
-  A.UNIDAD_VENTA AS UMED, 
-  CA.CLAVE_ARTICULO AS CODIGOB
-FROM TRASPASOS_IN_DET TID
-INNER JOIN TRASPASOS_DET TD 
-    ON TID.TRASPASO_IN_ID = TD.TRASPASO_IN_ID 
-    AND TID.ARTICULO_ID = TD.ARTICULO_ID
-INNER JOIN ARTICULOS A ON A.ARTICULO_ID = TID.ARTICULO_ID
-INNER JOIN CLAVES_ARTICULOS CA 
-    ON CA.ARTICULO_ID = TID.ARTICULO_ID 
-    AND CA.ROL_CLAVE_ART_ID = 58486
+              SELECT TID.CLAVE_ARTICULO,A.NOMBRE,TID.UNIDADES,A.UNIDAD_VENTA AS UMED,CA.CLAVE_ARTICULO AS CODIGOB FROM TRASPASOS_IN_DET TID
+LEFT JOIN ARTICULOS A ON A.ARTICULO_ID = TID.ARTICULO_ID
+LEFT JOIN CLAVES_ARTICULOS CA ON CA.ARTICULO_ID = TID.ARTICULO_ID AND CA.ROL_CLAVE_ART_ID = 58486
 WHERE TID.TRASPASO_IN_ID = ?
             `;
 
@@ -1847,6 +1836,18 @@ app.get('/ventanilla', (req, res) => {
             });
         });
     });
+});
+app.get('/nuevos-traspasos', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT COUNT(*) AS total FROM VENTANILLA_PENDIENTES WHERE ESTATUS = 'P'
+    `);
+
+    const hayNuevo = result[0].TOTAL > 0;
+    res.json({ hayNuevo });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al consultar traspasos' });
+  }
 });
 
 // DETALLE DE TRASPASO 
