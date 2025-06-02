@@ -1837,17 +1837,34 @@ app.get('/ventanilla', (req, res) => {
         });
     });
 });
-app.get('/nuevos-traspasos', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT COUNT(*) AS total FROM VENTANILLA_PENDIENTES WHERE ESTATUS = 'P'
-    `);
+app.get('/nuevos-traspasos', (req, res) => {
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Error al conectar a Firebird:', err);
+      return res.status(500).json({ error: 'Error al conectar a la base de datos' });
+    }
 
-    const hayNuevo = result[0].TOTAL > 0;
-    res.json({ hayNuevo });
-  } catch (err) {
-    res.status(500).json({ error: 'Error al consultar traspasos' });
-  }
+    const query = `
+      SELECT COUNT(*) AS TOTAL
+      FROM VENTANILLA_PENDIENTES
+      WHERE ESTATUS = 'P'
+    `;
+
+    db.query(query, (err, result) => {
+      db.detach();
+
+      if (err) {
+        console.error('Error en la consulta de nuevos traspasos:', err);
+        return res.status(500).json({ error: 'Error al consultar traspasos' });
+      }
+
+      // En Firebird la propiedad puede ser uppercase o lowercase, revisa
+      const total = result[0]?.TOTAL ?? result[0]?.total ?? 0;
+      const hayNuevo = total > 0;
+
+      res.json({ hayNuevo });
+    });
+  });
 });
 
 // DETALLE DE TRASPASO 
@@ -2124,59 +2141,59 @@ app.post('/enviar-pedido', (req, res) => {
                     });
                 }
 
-                // ✅ Si el estatus es válido (por ejemplo 'T'), continuar
-                const updateQuery = `
-                    UPDATE VENTANILLA_PENDIENTES
-                    SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
-                    WHERE TRASPASO_IN_ID = ?
+                // ✅ Primero insertar productos
+                const insertQuery = `
+                    INSERT INTO VENTANILLA_DET (TRASPASO_IN_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
+                    VALUES (?, ?, ?, ?, ?)
                 `;
 
-                transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
-                    if (err) {
-                        console.error('Error al actualizar traspaso:', err);
-                        transaction.rollback(() => db.detach());
-                        return res.status(500).json({
-                            message: 'No se pudo actualizar el traspaso'
-                        });
+                const promises = productos.map((producto) => {
+                    const {
+                        ARTICULO_ID,
+                        CLAVE_ARTICULO,
+                        UNIDADES,
+                        SURTIDAS
+                    } = producto;
+
+                    if (!ARTICULO_ID || !CLAVE_ARTICULO) {
+                        console.error('Error: ARTICULO_ID o CLAVE_ARTICULO son inválidos', producto);
+                        return Promise.reject('Faltan valores de ARTICULO_ID o CLAVE_ARTICULO');
                     }
 
-                    const insertQuery = `
-                        INSERT INTO VENTANILLA_DET (TRASPASO_IN_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
-                        VALUES (?, ?, ?, ?, ?)
-                    `;
+                    if (isNaN(UNIDADES) || isNaN(SURTIDAS)) {
+                        console.error('Error: UNIDADES o SURTIDAS no son válidos', producto);
+                        return Promise.reject('Unidades o Surtidas no son válidos');
+                    }
 
-                    const promises = productos.map((producto) => {
-                        const {
-                            ARTICULO_ID,
-                            CLAVE_ARTICULO,
-                            UNIDADES,
-                            SURTIDAS
-                        } = producto;
-
-                        if (!ARTICULO_ID || !CLAVE_ARTICULO) {
-                            console.error('Error: ARTICULO_ID o CLAVE_ARTICULO son inválidos', producto);
-                            return Promise.reject('Faltan valores de ARTICULO_ID o CLAVE_ARTICULO');
-                        }
-
-                        if (isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                            console.error('Error: UNIDADES o SURTIDAS no son válidos', producto);
-                            return Promise.reject('Unidades o Surtidas no son válidos');
-                        }
-
-                        return new Promise((resolve, reject) => {
-                            transaction.query(insertQuery, [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS], (err) => {
-                                if (err) {
-                                    console.error('Error al insertar detalle en VENTANILLA_DET:', err);
-                                    reject(err);
-                                } else {
-                                    resolve();
-                                }
-                            });
-                        });
+                    return new Promise((resolve, reject) => {
+                        transaction.query(
+                            insertQuery,
+                            [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS],
+                            (err) => {
+                                err ? reject(err) : resolve();
+                            }
+                        );
                     });
+                });
 
-                    Promise.all(promises)
-                        .then(() => {
+                Promise.all(promises)
+                    .then(() => {
+                        // ✅ Después actualizar el estatus
+                        const updateQuery = `
+                            UPDATE VENTANILLA_PENDIENTES
+                            SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
+                            WHERE TRASPASO_IN_ID = ?
+                        `;
+
+                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
+                            if (err) {
+                                console.error('Error al actualizar traspaso:', err);
+                                transaction.rollback(() => db.detach());
+                                return res.status(500).json({
+                                    message: 'No se pudo actualizar el traspaso'
+                                });
+                            }
+
                             transaction.commit((err) => {
                                 if (err) {
                                     console.error('Error al hacer commit de la transacción:', err);
@@ -2191,15 +2208,15 @@ app.post('/enviar-pedido', (req, res) => {
                                     message: 'Pedido enviado correctamente.'
                                 });
                             });
-                        })
-                        .catch((error) => {
-                            console.error('Error al insertar productos:', error);
-                            transaction.rollback(() => db.detach());
-                            return res.status(500).json({
-                                message: 'Error al insertar productos'
-                            });
                         });
-                });
+                    })
+                    .catch((error) => {
+                        console.error('Error al insertar productos:', error);
+                        transaction.rollback(() => db.detach());
+                        return res.status(500).json({
+                            message: 'Error al insertar productos'
+                        });
+                    });
             });
         });
     });
@@ -2226,7 +2243,7 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
         if (err) {
             console.error('Error al conectar a Firebird:', err);
             return res.status(500).json({
-                message: 'No se realizo ningun cambio, vuelve a intentarlo'
+                message: 'No se realizó ningún cambio, vuelve a intentarlo'
             });
         }
 
@@ -2239,7 +2256,6 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
                 });
             }
 
-            // 🔍 1. Validar estatus actual del traspaso
             const selectEstatusQuery = `SELECT ESTATUS FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?`;
 
             transaction.query(selectEstatusQuery, [traspasoId], (err, result) => {
@@ -2260,44 +2276,47 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
                     });
                 }
 
-                // ✅ 2. Si es 'T', continuar con el proceso normal
-                const updateQuery = `
-                    UPDATE TRASPASOS_PENDIENTES
-                    SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
-                    WHERE TRASPASO_IN_ID = ?
+                const insertQuery = `
+                    INSERT INTO TRASPASOS_DET (TRASPASO_IN_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
+                    VALUES (?, ?, ?, ?, ?)
                 `;
 
-                transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
-                    if (err) {
-                        console.error('Error al actualizar traspaso:', err);
-                        transaction.rollback(() => db.detach());
-                        return res.status(500).json({
-                            message: 'No se pudo actualizar el traspaso'
-                        });
+                const promises = productos.map((producto) => {
+                    const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
+
+                    if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
+                        console.error('Error en datos del producto:', producto);
+                        return Promise.reject('Datos inválidos del producto');
                     }
 
-                    const insertQuery = `
-                        INSERT INTO TRASPASOS_DET (TRASPASO_IN_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
-                        VALUES (?, ?, ?, ?, ?)
-                    `;
-
-                    const promises = productos.map((producto) => {
-                        const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
-
-                        if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                            console.error('Error en datos del producto:', producto);
-                            return Promise.reject('Datos inválidos del producto');
-                        }
-
-                        return new Promise((resolve, reject) => {
-                            transaction.query(insertQuery, [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS], (err) => {
+                    return new Promise((resolve, reject) => {
+                        transaction.query(
+                            insertQuery,
+                            [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS],
+                            (err) => {
                                 err ? reject(err) : resolve();
-                            });
-                        });
+                            }
+                        );
                     });
+                });
 
-                    Promise.all(promises)
-                        .then(() => {
+                Promise.all(promises)
+                    .then(() => {
+                        const updateQuery = `
+                            UPDATE TRASPASOS_PENDIENTES
+                            SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
+                            WHERE TRASPASO_IN_ID = ?
+                        `;
+
+                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
+                            if (err) {
+                                console.error('Error al actualizar traspaso:', err);
+                                transaction.rollback(() => db.detach());
+                                return res.status(500).json({
+                                    message: 'No se pudo actualizar el estatus del traspaso'
+                                });
+                            }
+
                             transaction.commit((err) => {
                                 if (err) {
                                     console.error('Error al hacer commit:', err);
@@ -2312,15 +2331,15 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
                                     message: 'Pedido enviado correctamente.'
                                 });
                             });
-                        })
-                        .catch((error) => {
-                            console.error('Error al insertar productos:', error);
-                            transaction.rollback(() => db.detach());
-                            return res.status(500).json({
-                                message: 'Error al insertar productos'
-                            });
                         });
-                });
+                    })
+                    .catch((error) => {
+                        console.error('Error al insertar productos:', error);
+                        transaction.rollback(() => db.detach());
+                        return res.status(500).json({
+                            message: 'Error al insertar productos'
+                        });
+                    });
             });
         });
     });
