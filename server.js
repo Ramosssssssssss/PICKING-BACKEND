@@ -2631,44 +2631,45 @@ app.post('/pedido-enviado', (req, res) => {
                     });
                 }
 
-                // ✅ Continuar si es 'T'
-                const updateQuery = `
-                    UPDATE PEDIDOS_PENDIENTES
-                    SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
-                    WHERE DOCTO_VE_ID = ?
+                // ✅ Primero insertar los productos
+                const insertQuery = `
+                    INSERT INTO PEDIDOS_DET (DOCTO_VE_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
+                    VALUES (?, ?, ?, ?, ?)
                 `;
 
-                transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, doctoId], (err) => {
-                    if (err) {
-                        console.error('Error al actualizar pedido:', err);
-                        transaction.rollback(() => db.detach());
-                        return res.status(500).json({
-                            message: 'No se pudo actualizar el pedido'
-                        });
+                const promises = productos.map((producto) => {
+                    const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
+
+                    if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
+                        console.error('Error en datos del producto:', producto);
+                        return Promise.reject('Datos inválidos del producto');
                     }
 
-                    const insertQuery = `
-                        INSERT INTO PEDIDOS_DET (DOCTO_VE_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
-                        VALUES (?, ?, ?, ?, ?)
-                    `;
-
-                    const promises = productos.map((producto) => {
-                        const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
-
-                        if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                            console.error('Error en datos del producto:', producto);
-                            return Promise.reject('Datos inválidos del producto');
-                        }
-
-                        return new Promise((resolve, reject) => {
-                            transaction.query(insertQuery, [doctoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS], (err) => {
-                                err ? reject(err) : resolve();
-                            });
+                    return new Promise((resolve, reject) => {
+                        transaction.query(insertQuery, [doctoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS], (err) => {
+                            err ? reject(err) : resolve();
                         });
                     });
+                });
 
-                    Promise.all(promises)
-                        .then(() => {
+                Promise.all(promises)
+                    .then(() => {
+                        // ✅ Luego actualizar el estatus
+                        const updateQuery = `
+                            UPDATE PEDIDOS_PENDIENTES
+                            SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
+                            WHERE DOCTO_VE_ID = ?
+                        `;
+
+                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, doctoId], (err) => {
+                            if (err) {
+                                console.error('Error al actualizar pedido:', err);
+                                transaction.rollback(() => db.detach());
+                                return res.status(500).json({
+                                    message: 'No se pudo actualizar el estatus del pedido'
+                                });
+                            }
+
                             transaction.commit((err) => {
                                 if (err) {
                                     console.error('Error al hacer commit:', err);
@@ -2683,15 +2684,15 @@ app.post('/pedido-enviado', (req, res) => {
                                     message: 'Pedido enviado correctamente.'
                                 });
                             });
-                        })
-                        .catch((error) => {
-                            console.error('Error al insertar productos:', error);
-                            transaction.rollback(() => db.detach());
-                            return res.status(500).json({
-                                message: 'Error al insertar productos'
-                            });
                         });
-                });
+                    })
+                    .catch((error) => {
+                        console.error('Error al insertar productos:', error);
+                        transaction.rollback(() => db.detach());
+                        return res.status(500).json({
+                            message: 'Error al insertar productos'
+                        });
+                    });
             });
         });
     });
