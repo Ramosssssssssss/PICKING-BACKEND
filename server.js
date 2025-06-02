@@ -958,7 +958,6 @@ app.get('/folio', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
-            return res.status(500).json({ error: 'Error de conexión a base de datos' });
         }
 
         db.query(sql, params, (err, result) => {
