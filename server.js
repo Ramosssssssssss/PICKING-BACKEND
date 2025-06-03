@@ -1,4 +1,6 @@
 const express = require('express');
+const PDFDocument = require('pdfkit');
+
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const Firebird = require('node-firebird');
@@ -804,7 +806,170 @@ app.get('/historial', (req, res) => {
         });
     });
 });
+app.get('/descargar-pdf', (req, res) => {
+  const { fecha } = req.query;
 
+  if (!fecha) {
+    return res.status(400).json({ error: 'Falta el parámetro "fecha" (YYYY-MM-DD)' });
+  }
+
+  Firebird.attach(firebirdConfig, (err, db) => {
+    if (err) {
+      console.error('Conexión Firebird fallida:', err);
+      return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+    }
+
+    const sql = `
+      SELECT 
+        VISITA_ID,
+        NOMBRE,
+        MOTIVO,
+        AREA_A_VISITAR AS AREA,
+        COLABORADOR_A_VISITAR AS COLABORADOR,
+        HORA_ENTRADA,
+        FECHA_ENTRADA
+      FROM VISITAS_FYTTSANET
+      WHERE ACTIVO = FALSE AND FECHA_ENTRADA = ?
+      ORDER BY HORA_ENTRADA DESC
+    `;
+
+    db.query(sql, [fecha], (err, result) => {
+      db.detach();
+
+      if (err) {
+        console.error('Error al consultar visitas:', err);
+        return res.status(500).json({ error: 'Error al obtener visitas' });
+      }
+
+      if (!result || result.length === 0) {
+        return res.status(404).json({ error: 'No hay visitas para la fecha indicada' });
+      }
+
+      const visitasNormalizadas = result.map((v) => ({
+        visita_id: v.VISITA_ID,
+        nombre: v.NOMBRE || '',
+        motivo: v.MOTIVO || '',
+        area: v.AREA || '',
+        colaborador: v.COLABORADOR || '',
+        hora_entrada: v.HORA_ENTRADA || '',
+        fecha_entrada: v.FECHA_ENTRADA || '',
+      }));
+
+      const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=visitas_${fecha}.pdf`);
+      doc.pipe(res);
+
+      // --- HEADER ---
+      function drawHeader() {
+        doc
+          .fillColor('#34495e')
+          .fontSize(24)
+          .font('Helvetica-Bold')
+          .text('Historial de Visitas', 50, 40);
+
+        const fechaFormatted = new Date(fecha).toLocaleDateString('es-ES', {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        doc
+          .fontSize(12)
+          .fillColor('#7f8c8d')
+          .font('Helvetica-Oblique')
+          .text(fechaFormatted, 50, 70);
+
+        // Línea decorativa
+        doc
+          .moveTo(50, 95)
+          .lineTo(545, 95)
+          .lineWidth(2)
+          .strokeColor('#2980b9')
+          .stroke();
+
+        // (Opcional) Logo: descomenta y cambia ruta si tienes uno
+        // doc.image('path/to/logo.png', 480, 30, { width: 50 });
+      }
+
+      // --- TABLE ---
+      
+     function drawTable(headers, rows, startY) {
+ const columnWidths = [50, 140, 130, 90, 110];
+  const startX = 50;
+  let y = startY;
+
+  // Header background
+  doc.fillColor('#2980b9');
+  doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
+
+  // Header text
+  doc.fillColor('white').fontSize(12).font('Helvetica-Bold');
+  let x = startX;
+  headers.forEach((header, i) => {
+    doc.text(header, x + 5, y + 8, { width: columnWidths[i] - 10, align: 'center' });
+    x += columnWidths[i];
+  });
+
+  y += 30;
+
+  // Rows
+  doc.font('Helvetica').fontSize(10);
+  rows.forEach((row, index) => {
+    // Alternar color de fila
+    if (index % 2 === 0) {
+      doc.fillColor('#ecf0f1');
+      doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
+    }
+    doc.fillColor('#2c3e50');
+ const fechaFormateada = row.fecha_entrada
+      ? new Date(row.fecha_entrada).toLocaleDateString('es-ES')
+      : '';
+    x = startX;
+    [
+      row.visita_id,
+      row.nombre,
+      row.motivo,
+      row.area,
+      row.colaborador,
+    ].forEach((text, i) => {
+      doc.text(String(text), x + 5, y + 8, { width: columnWidths[i] - 10, align: 'left' });
+      x += columnWidths[i];
+    });
+
+    y += 30;
+
+    // Salto de página si se acerca al final
+    if (y > 700) { // un poco antes para más margen
+      doc.addPage();
+      y = 50;
+    }
+  });
+
+  return y;
+}
+
+      // --- FOOTER ---
+      function addFooter(pageNumber, totalPages) {
+        doc.fontSize(9).fillColor('#7f8c8d');
+        const footerText = `Página ${pageNumber} de ${totalPages}`;
+        doc.text(footerText, 50, 780, { align: 'center', width: 500 });
+      }
+
+      // --- CREAR PDF ---
+      drawHeader();
+const headers = ['ID', 'Nombre', 'Motivo', 'Área', 'Colaborador'];
+      drawTable(headers, visitasNormalizadas, 150);
+
+      // Agregar números de página
+      const pages = doc.bufferedPageRange();
+      for (let i = 0; i < pages.count; i++) {
+        doc.switchToPage(i);
+        addFooter(i + 1, pages.count);
+      }
+
+      doc.end();
+    });
+  });
+});
 //OPERADORES
 app.get('/buscar-usuario', (req, res) => {
     const searchQuery = req.query.query;
@@ -1004,15 +1169,11 @@ app.get('/folio', (req, res) => {
                         const insertSql = `
                             INSERT INTO CTRL_INF_ENV (
                                 SISTEMA,
-                                DOCTO_ORIGEN_ID,
                                 DOCTO_DEST_ID,
                                 PROCESO_ID,
-                                FECHA_PROC_2,
-                                FECHA_PROC_3,
-                                FECHA_PROC_4,
                                 FECHA_PROC_5,
-                                FECHA_PROC_6
-                            ) VALUES (?, NULL, ?, ?, NULL, NULL, NULL, CURRENT_DATE, NULL)
+                               
+                            ) VALUES (?, ?, ?, CURRENT_DATE )
                         `;
 
                         db.query(insertSql, ['PM', doctoVeId, 5], (insertErr) => {
