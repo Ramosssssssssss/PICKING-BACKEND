@@ -21,8 +21,8 @@ app.use(bodyParser.json());
 const firebirdConfig = {
     host: '85.215.109.213',
     port: 3050,
-    // database: 'D:\\Microsip datos\\GUIMAR.FDB',
-    database: 'D:\\Microsip datos\\GUIMARTEST.FDB',
+    database: 'D:\\Microsip datos\\GUIMAR.FDB',
+    // database: 'D:\\Microsip datos\\GUIMARTEST.FDB',
     user: 'SYSDBA',
     password: 'BlueMamut$23',
     lowercase_keys: false,
@@ -2107,7 +2107,7 @@ app.post('/tomar-traspaso', (req, res) => {
             });
         }
 
-        // NUEVA VALIDACIÓN: verificar si el picker ya está surtiendo
+        // Verificar si el picker ya está surtiendo
         const checkSurtidoQuery = `SELECT SURTIENDO FROM PICKERS WHERE PIKER_ID = ?`;
 
         db.query(checkSurtidoQuery, [pikerId], (err, pickerResult) => {
@@ -2127,7 +2127,7 @@ app.post('/tomar-traspaso', (req, res) => {
                 });
             }
 
-            // CONTINÚA FLUJO NORMAL
+            // Validar traspaso disponible
             const checkQuery = `SELECT ESTATUS, PICKER_ID FROM VENTANILLA_PENDIENTES WHERE TRASPASO_IN_ID = ?`;
 
             db.query(checkQuery, [traspasoInId], (err, result) => {
@@ -2162,7 +2162,8 @@ app.post('/tomar-traspaso', (req, res) => {
                     });
                 }
 
-                const updateQuery = `
+                // Ejecutar ambos updates: traspaso + SURTIENDO
+                const updateTraspasoQuery = `
                     UPDATE VENTANILLA_PENDIENTES
                     SET ESTATUS = 'T',
                         PICKER_ID = ?,
@@ -2171,18 +2172,35 @@ app.post('/tomar-traspaso', (req, res) => {
                     WHERE TRASPASO_IN_ID = ?
                 `;
 
-                db.query(updateQuery, [pikerId, fechaIni, horaIni, traspasoInId], (err) => {
-                    db.detach();
+              const updateSurtidoQuery = `
+    UPDATE PICKERS
+    SET SURTIENDO = TRUE
+    WHERE PIKER_ID = ?
+`;
 
+                db.query(updateTraspasoQuery, [pikerId, fechaIni, horaIni, traspasoInId], (err) => {
                     if (err) {
+                        db.detach();
                         console.error('Error actualizando traspaso:', err);
                         return res.status(500).json({
                             message: 'No se pudo actualizar el traspaso'
                         });
                     }
 
-                    return res.status(200).json({
-                        message: 'Traspaso tomado con éxito'
+                    // Ahora actualizar SURTIENDO en PICKERS
+                    db.query(updateSurtidoQuery, [pikerId], (err) => {
+                        db.detach();
+
+                        if (err) {
+                            console.error('Error actualizando estado SURTIENDO del picker:', err);
+                            return res.status(500).json({
+                                message: 'Traspaso tomado, pero no se pudo actualizar el estado del picker'
+                            });
+                        }
+
+                        return res.status(200).json({
+                            message: 'Traspaso tomado con éxito y picker actualizado'
+                        });
                     });
                 });
             });
@@ -2211,7 +2229,7 @@ app.post('/update-traspaso', (req, res) => {
         }
 
         const selectQuery = `
-            SELECT ESTATUS FROM VENTANILLA_PENDIENTES WHERE TRASPASO_IN_ID = ?
+            SELECT ESTATUS, PICKER_ID FROM VENTANILLA_PENDIENTES WHERE TRASPASO_IN_ID = ?
         `;
 
         db.query(selectQuery, [traspasoInId], (err, result) => {
@@ -2223,7 +2241,7 @@ app.post('/update-traspaso', (req, res) => {
                 });
             }
 
-            const currentStatus = result[0].ESTATUS;
+            const { ESTATUS: currentStatus, PICKER_ID: currentPickerId } = result[0];
 
             if (currentStatus === 'S' || currentStatus === 'E') {
                 db.detach();
@@ -2241,18 +2259,42 @@ app.post('/update-traspaso', (req, res) => {
                 `;
 
                 db.query(updateQuery, [traspasoInId], (err) => {
-                    db.detach();
-
                     if (err) {
+                        db.detach();
                         console.error('Error actualizando el estatus a P:', err);
                         return res.status(500).json({
                             message: 'No se pudo actualizar el estatus a P'
                         });
                     }
 
-                    return res.status(200).json({
-                        message: 'Traspaso liberado correctamente (estatus cambiado a P)'
-                    });
+                    // Si tenía un picker, actualizar también su estado SURTIENDO
+                    if (currentPickerId) {
+                        const updatePickerQuery = `
+                            UPDATE PICKERS
+                            SET SURTIENDO = FALSE
+                            WHERE PIKER_ID = ?
+                        `;
+
+                        db.query(updatePickerQuery, [currentPickerId], (err) => {
+                            db.detach();
+
+                            if (err) {
+                                console.error('Error actualizando SURTIENDO del picker:', err);
+                                return res.status(200).json({
+                                    message: 'Traspaso liberado correctamente, pero no se pudo actualizar SURTIENDO del picker'
+                                });
+                            }
+
+                            return res.status(200).json({
+                                message: 'Traspaso liberado correctamente (estatus cambiado a P)'
+                            });
+                        });
+                    } else {
+                        db.detach();
+                        return res.status(200).json({
+                            message: 'Traspaso liberado correctamente (estatus cambiado a P)'
+                        });
+                    }
                 });
             } else {
                 db.detach();
@@ -2263,6 +2305,7 @@ app.post('/update-traspaso', (req, res) => {
         });
     });
 });
+
 
 //MANDAR PEDIDO
 app.post('/enviar-pedido', (req, res) => {
@@ -2303,9 +2346,8 @@ app.post('/enviar-pedido', (req, res) => {
                 });
             }
 
-            // 🔍 Validar estatus actual
             const selectEstatusQuery = `
-                SELECT ESTATUS FROM VENTANILLA_PENDIENTES WHERE TRASPASO_IN_ID = ?
+                SELECT ESTATUS, PICKER_ID FROM VENTANILLA_PENDIENTES WHERE TRASPASO_IN_ID = ?
             `;
 
             transaction.query(selectEstatusQuery, [traspasoId], (err, result) => {
@@ -2317,7 +2359,7 @@ app.post('/enviar-pedido', (req, res) => {
                     });
                 }
 
-                const estatusActual = result[0]?.ESTATUS;
+                const { ESTATUS: estatusActual, PICKER_ID: pickerId } = result[0];
 
                 if (estatusActual === 'E' || estatusActual === 'S') {
                     transaction.rollback(() => db.detach());
@@ -2326,7 +2368,7 @@ app.post('/enviar-pedido', (req, res) => {
                     });
                 }
 
-                // ✅ Primero insertar productos
+                // Insertar productos
                 const insertQuery = `
                     INSERT INTO VENTANILLA_DET (TRASPASO_IN_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
                     VALUES (?, ?, ?, ?, ?)
@@ -2340,37 +2382,29 @@ app.post('/enviar-pedido', (req, res) => {
                         SURTIDAS
                     } = producto;
 
-                    if (!ARTICULO_ID || !CLAVE_ARTICULO) {
-                        console.error('Error: ARTICULO_ID o CLAVE_ARTICULO son inválidos', producto);
-                        return Promise.reject('Faltan valores de ARTICULO_ID o CLAVE_ARTICULO');
-                    }
-
-                    if (isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                        console.error('Error: UNIDADES o SURTIDAS no son válidos', producto);
-                        return Promise.reject('Unidades o Surtidas no son válidos');
+                    if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
+                        console.error('Error en producto:', producto);
+                        return Promise.reject('Datos de producto inválidos');
                     }
 
                     return new Promise((resolve, reject) => {
                         transaction.query(
                             insertQuery,
                             [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS],
-                            (err) => {
-                                err ? reject(err) : resolve();
-                            }
+                            (err) => err ? reject(err) : resolve()
                         );
                     });
                 });
 
                 Promise.all(promises)
                     .then(() => {
-                        // ✅ Después actualizar el estatus
-                        const updateQuery = `
+                        const updateTraspasoQuery = `
                             UPDATE VENTANILLA_PENDIENTES
                             SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
                             WHERE TRASPASO_IN_ID = ?
                         `;
 
-                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
+                        transaction.query(updateTraspasoQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
                             if (err) {
                                 console.error('Error al actualizar traspaso:', err);
                                 transaction.rollback(() => db.detach());
@@ -2379,20 +2413,50 @@ app.post('/enviar-pedido', (req, res) => {
                                 });
                             }
 
-                            transaction.commit((err) => {
-                                if (err) {
-                                    console.error('Error al hacer commit de la transacción:', err);
-                                    db.detach();
-                                    return res.status(500).json({
-                                        message: 'Error al hacer commit de la transacción'
-                                    });
-                                }
+                            // Actualizar SURTIENDO del picker si existía
+                            if (pickerId) {
+                                const updatePickerQuery = `
+                                    UPDATE PICKERS
+                                    SET SURTIENDO = FALSE
+                                    WHERE PIKER_ID = ?
+                                `;
 
-                                db.detach();
-                                return res.status(200).json({
-                                    message: 'Pedido enviado correctamente.'
+                                transaction.query(updatePickerQuery, [pickerId], (err) => {
+                                    if (err) {
+                                        console.error('Error actualizando SURTIENDO:', err);
+                                        // Commit aún si falla esto
+                                    }
+
+                                    transaction.commit((err) => {
+                                        db.detach();
+                                        if (err) {
+                                            console.error('Commit fallido:', err);
+                                            return res.status(500).json({
+                                                message: 'Error al confirmar la transacción'
+                                            });
+                                        }
+
+                                        return res.status(200).json({
+                                            message: 'Pedido enviado correctamente.'
+                                        });
+                                    });
                                 });
-                            });
+                            } else {
+                                // No hay picker asignado, solo commit
+                                transaction.commit((err) => {
+                                    db.detach();
+                                    if (err) {
+                                        console.error('Commit fallido:', err);
+                                        return res.status(500).json({
+                                            message: 'Error al confirmar la transacción'
+                                        });
+                                    }
+
+                                    return res.status(200).json({
+                                        message: 'Pedido enviado correctamente.'
+                                    });
+                                });
+                            }
                         });
                     })
                     .catch((error) => {
@@ -2406,6 +2470,7 @@ app.post('/enviar-pedido', (req, res) => {
         });
     });
 });
+
 
 
 
@@ -2441,23 +2506,25 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
                 });
             }
 
-            const selectEstatusQuery = `SELECT ESTATUS FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?`;
+            const selectEstatusQuery = `
+                SELECT ESTATUS, PICKER_ID FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?
+            `;
 
             transaction.query(selectEstatusQuery, [traspasoId], (err, result) => {
-                if (err) {
-                    console.error('Error al consultar el estatus actual:', err);
+                if (err || result.length === 0) {
+                    console.error('Error al consultar estatus:', err);
                     transaction.rollback(() => db.detach());
                     return res.status(500).json({
                         message: 'Error al consultar el estatus actual del traspaso'
                     });
                 }
 
-                const estatusActual = result[0]?.ESTATUS;
+                const { ESTATUS: estatusActual, PICKER_ID } = result[0];
 
                 if (estatusActual === 'E' || estatusActual === 'S') {
                     transaction.rollback(() => db.detach());
                     return res.status(400).json({
-                        message: 'El pedido ya fue enviado. Sal de este pedido.'
+                        message: `El pedido ya fue enviado (estatus "${estatusActual}"). Sal de este pedido.`
                     });
                 }
 
@@ -2466,54 +2533,61 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
                     VALUES (?, ?, ?, ?, ?)
                 `;
 
-                const promises = productos.map((producto) => {
-                    const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
-
+                const insertPromises = productos.map(({ ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS }) => {
                     if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                        console.error('Error en datos del producto:', producto);
-                        return Promise.reject('Datos inválidos del producto');
+                        console.error('Producto inválido:', { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS });
+                        return Promise.reject('Producto inválido');
                     }
 
                     return new Promise((resolve, reject) => {
-                        transaction.query(
-                            insertQuery,
-                            [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS],
-                            (err) => {
-                                err ? reject(err) : resolve();
-                            }
-                        );
+                        transaction.query(insertQuery, [traspasoId, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS], (err) => {
+                            err ? reject(err) : resolve();
+                        });
                     });
                 });
 
-                Promise.all(promises)
+                Promise.all(insertPromises)
                     .then(() => {
-                        const updateQuery = `
+                        const updateTraspasoQuery = `
                             UPDATE TRASPASOS_PENDIENTES
                             SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
                             WHERE TRASPASO_IN_ID = ?
                         `;
 
-                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
+                        transaction.query(updateTraspasoQuery, [nuevoEstatus, fechaFin, horaFin, traspasoId], (err) => {
                             if (err) {
                                 console.error('Error al actualizar traspaso:', err);
                                 transaction.rollback(() => db.detach());
                                 return res.status(500).json({
-                                    message: 'No se pudo actualizar el estatus del traspaso'
+                                    message: 'Error al actualizar el traspaso'
                                 });
                             }
 
-                            transaction.commit((err) => {
+                            const updatePickerQuery = `
+                                UPDATE PICKERS SET SURTIENDO = FALSE WHERE PIKER_ID = ?
+                            `;
+
+                            transaction.query(updatePickerQuery, [PICKER_ID], (err) => {
                                 if (err) {
-                                    console.error('Error al hacer commit:', err);
-                                    db.detach();
+                                    console.error('Error al actualizar picker:', err);
+                                    transaction.rollback(() => db.detach());
                                     return res.status(500).json({
-                                        message: 'Error al hacer commit de la transacción'
+                                        message: 'Error al actualizar el picker'
                                     });
                                 }
 
-                                db.detach();
-                                return res.status(200).json({
-                                    message: 'Pedido enviado correctamente.'
+                                transaction.commit((err) => {
+                                    db.detach();
+                                    if (err) {
+                                        console.error('Error al hacer commit:', err);
+                                        return res.status(500).json({
+                                            message: 'Error al finalizar la transacción'
+                                        });
+                                    }
+
+                                    return res.status(200).json({
+                                        message: 'Pedido enviado correctamente.'
+                                    });
                                 });
                             });
                         });
@@ -2529,6 +2603,7 @@ app.post('/traspaso-pedido-enviado', (req, res) => {
         });
     });
 });
+
 
 
 
@@ -2577,54 +2652,94 @@ app.post('/tomar-pedido', (req, res) => {
             });
         }
 
-        const checkQuery = `SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
+        // Verificar si el picker ya está surtindo
+        const checkSurtidoQuery = `SELECT SURTIENDO FROM PICKERS WHERE PIKER_ID = ?`;
 
-        db.query(checkQuery, [doctoVeId], (err, result) => {
-            if (err || result.length === 0) {
+        db.query(checkSurtidoQuery, [pikerId], (err, surtidoResult) => {
+            if (err || surtidoResult.length === 0) {
                 db.detach();
-                console.error('Error en la verificación de estatus:', err);
+                console.error('Error verificando SURTIENDO del picker:', err);
                 return res.status(500).json({
-                    message: 'Error al verificar el estatus'
+                    message: 'Error al verificar estado del picker'
                 });
             }
 
-            const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
+            const { SURTIENDO } = surtidoResult[0];
 
-            if (estatus !== 'P') {
+            if (SURTIENDO === true) {
                 db.detach();
                 return res.status(409).json({
-                    message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                    message: 'Ya tienes un pedido surtindo, no puedes tomar otro'
                 });
             }
 
-            if (currentPickerId !== null && currentPickerId !== pikerId) {
-                db.detach();
-                return res.status(403).json({
-                    message: `Este pedido ya fue tomado por otro picker (ID: ${currentPickerId})`
-                });
-            }
+            // Continuar con la verificación del estatus del pedido
+            const checkQuery = `SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
 
-            const updateQuery = `
-                UPDATE PEDIDOS_PENDIENTES
-                SET ESTATUS = 'T',
-                    PICKER_ID = ?,
-                    FECHA_INI = ?,
-                    HORA_INI = ?
-                WHERE DOCTO_VE_ID = ?
-            `;
-
-            db.query(updateQuery, [pikerId, fechaIni, horaIni, doctoVeId], (err) => {
-                db.detach();
-
-                if (err) {
-                    console.error('Error actualizando pedido:', err);
+            db.query(checkQuery, [doctoVeId], (err, result) => {
+                if (err || result.length === 0) {
+                    db.detach();
+                    console.error('Error en la verificación de estatus:', err);
                     return res.status(500).json({
-                        message: 'No se pudo actualizar el pedido'
+                        message: 'Error al verificar el estatus'
                     });
                 }
 
-                return res.status(200).json({
-                    message: 'Pedido tomado con éxito'
+                const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
+
+                if (estatus !== 'P') {
+                    db.detach();
+                    return res.status(409).json({
+                        message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                    });
+                }
+
+                if (currentPickerId !== null && currentPickerId !== pikerId) {
+                    db.detach();
+                    return res.status(403).json({
+                        message: `Este pedido ya fue tomado por otro picker (ID: ${currentPickerId})`
+                    });
+                }
+
+                const updateQuery = `
+                    UPDATE PEDIDOS_PENDIENTES
+                    SET ESTATUS = 'T',
+                        PICKER_ID = ?,
+                        FECHA_INI = ?,
+                        HORA_INI = ?
+                    WHERE DOCTO_VE_ID = ?
+                `;
+
+                db.query(updateQuery, [pikerId, fechaIni, horaIni, doctoVeId], (err) => {
+                    if (err) {
+                        db.detach();
+                        console.error('Error actualizando pedido:', err);
+                        return res.status(500).json({
+                            message: 'No se pudo actualizar el pedido'
+                        });
+                    }
+
+                    // Actualizar SURTIENDO a TRUE porque ya está tomando un pedido
+                    const updateSurtidoQuery = `
+                        UPDATE PICKERS
+                        SET SURTIENDO = TRUE
+                        WHERE PIKER_ID = ?
+                    `;
+
+                    db.query(updateSurtidoQuery, [pikerId], (err) => {
+                        db.detach();
+
+                        if (err) {
+                            console.error('Error actualizando estado SURTIENDO del picker:', err);
+                            return res.status(200).json({
+                                message: 'Pedido tomado con éxito, pero no se pudo actualizar estado SURTIENDO del picker'
+                            });
+                        }
+
+                        return res.status(200).json({
+                            message: 'Pedido tomado con éxito'
+                        });
+                    });
                 });
             });
         });
@@ -2709,8 +2824,9 @@ app.post('/update-pedido', (req, res) => {
             });
         }
 
+        // Primero obtener ESTATUS y PICKER_ID para saber qué hacer y a quién liberar
         const selectQuery = `
-            SELECT ESTATUS FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?
+            SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?
         `;
 
         db.query(selectQuery, [doctoVeId], (err, result) => {
@@ -2722,7 +2838,7 @@ app.post('/update-pedido', (req, res) => {
                 });
             }
 
-            const currentStatus = result[0].ESTATUS;
+            const { ESTATUS: currentStatus, PICKER_ID: currentPickerId } = result[0];
 
             if (currentStatus === 'S' || currentStatus === 'E') {
                 db.detach();
@@ -2732,26 +2848,51 @@ app.post('/update-pedido', (req, res) => {
             }
 
             if (currentStatus === 'T') {
-                const updateQuery = `
+                // Actualizar PEDIDOS_PENDIENTES y luego actualizar SURTIENDO en PICKERS
+                const updatePedidoQuery = `
                     UPDATE PEDIDOS_PENDIENTES
                     SET ESTATUS = 'P',
                         PICKER_ID = NULL
                     WHERE DOCTO_VE_ID = ?
                 `;
 
-                db.query(updateQuery, [doctoVeId], (err) => {
-                    db.detach();
-
+                db.query(updatePedidoQuery, [doctoVeId], (err) => {
                     if (err) {
+                        db.detach();
                         console.error('Error actualizando el estatus a P:', err);
                         return res.status(500).json({
                             message: 'No se pudo actualizar el estatus a P'
                         });
                     }
 
-                    return res.status(200).json({
-                        message: 'Pedido liberado correctamente (estatus cambiado a P)'
-                    });
+                    // Si había un picker asignado, actualizar SURTIENDO a FALSE para ese picker
+                    if (currentPickerId) {
+                        const updateSurtidoQuery = `
+                            UPDATE PICKERS
+                            SET SURTIENDO = FALSE
+                            WHERE PIKER_ID = ?
+                        `;
+
+                        db.query(updateSurtidoQuery, [currentPickerId], (err) => {
+                            db.detach();
+
+                            if (err) {
+                                console.error('Error actualizando estado SURTIENDO del picker:', err);
+                                return res.status(200).json({
+                                    message: 'Pedido liberado correctamente, pero no se pudo actualizar SURTIENDO del picker'
+                                });
+                            }
+
+                            return res.status(200).json({
+                                message: 'Pedido liberado correctamente (estatus cambiado a P)'
+                            });
+                        });
+                    } else {
+                        db.detach();
+                        return res.status(200).json({
+                            message: 'Pedido liberado correctamente (estatus cambiado a P)'
+                        });
+                    }
                 });
             } else {
                 db.detach();
@@ -2795,8 +2936,7 @@ app.post('/pedido-enviado', (req, res) => {
                 });
             }
 
-            // 🔍 Validar el estatus actual del pedido
-            const selectQuery = `SELECT ESTATUS FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
+            const selectQuery = `SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
 
             transaction.query(selectQuery, [doctoId], (err, result) => {
                 if (err || result.length === 0) {
@@ -2807,7 +2947,7 @@ app.post('/pedido-enviado', (req, res) => {
                     });
                 }
 
-                const estatusActual = result[0].ESTATUS;
+                const { ESTATUS: estatusActual, PICKER_ID } = result[0];
 
                 if (estatusActual === 'E' || estatusActual === 'S') {
                     transaction.rollback(() => db.detach());
@@ -2816,17 +2956,14 @@ app.post('/pedido-enviado', (req, res) => {
                     });
                 }
 
-                // ✅ Primero insertar los productos
                 const insertQuery = `
                     INSERT INTO PEDIDOS_DET (DOCTO_VE_ID, ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS)
                     VALUES (?, ?, ?, ?, ?)
                 `;
 
-                const promises = productos.map((producto) => {
-                    const { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS } = producto;
-
+                const promises = productos.map(({ ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS }) => {
                     if (!ARTICULO_ID || !CLAVE_ARTICULO || isNaN(UNIDADES) || isNaN(SURTIDAS)) {
-                        console.error('Error en datos del producto:', producto);
+                        console.error('Error en datos del producto:', { ARTICULO_ID, CLAVE_ARTICULO, UNIDADES, SURTIDAS });
                         return Promise.reject('Datos inválidos del producto');
                     }
 
@@ -2839,14 +2976,13 @@ app.post('/pedido-enviado', (req, res) => {
 
                 Promise.all(promises)
                     .then(() => {
-                        // ✅ Luego actualizar el estatus
-                        const updateQuery = `
+                        const updatePedidoQuery = `
                             UPDATE PEDIDOS_PENDIENTES
                             SET ESTATUS = ?, FECHA_FIN = ?, HORA_FIN = ?
                             WHERE DOCTO_VE_ID = ?
                         `;
 
-                        transaction.query(updateQuery, [nuevoEstatus, fechaFin, horaFin, doctoId], (err) => {
+                        transaction.query(updatePedidoQuery, [nuevoEstatus, fechaFin, horaFin, doctoId], (err) => {
                             if (err) {
                                 console.error('Error al actualizar pedido:', err);
                                 transaction.rollback(() => db.detach());
@@ -2855,18 +2991,31 @@ app.post('/pedido-enviado', (req, res) => {
                                 });
                             }
 
-                            transaction.commit((err) => {
+                            const updatePickerQuery = `
+                                UPDATE PICKERS SET SURTIENDO = FALSE WHERE PIKER_ID = ?
+                            `;
+
+                            transaction.query(updatePickerQuery, [PICKER_ID], (err) => {
                                 if (err) {
-                                    console.error('Error al hacer commit:', err);
-                                    db.detach();
+                                    console.error('Error al actualizar picker:', err);
+                                    transaction.rollback(() => db.detach());
                                     return res.status(500).json({
-                                        message: 'Error al hacer commit de la transacción'
+                                        message: 'Error al actualizar el picker'
                                     });
                                 }
 
-                                db.detach();
-                                return res.status(200).json({
-                                    message: 'Pedido enviado correctamente.'
+                                transaction.commit((err) => {
+                                    db.detach();
+                                    if (err) {
+                                        console.error('Error al hacer commit:', err);
+                                        return res.status(500).json({
+                                            message: 'Error al finalizar la transacción'
+                                        });
+                                    }
+
+                                    return res.status(200).json({
+                                        message: 'Pedido enviado correctamente.'
+                                    });
                                 });
                             });
                         });
@@ -2882,6 +3031,7 @@ app.post('/pedido-enviado', (req, res) => {
         });
     });
 });
+
 
 
 
@@ -2923,7 +3073,7 @@ app.post('/traspaso-tomado', (req, res) => {
 
     if (!traspasoInId || !pikerId) {
         return res.status(400).json({
-            message: 'transpaso_in_id y PIKER_ID son requeridos'
+            message: 'traspaso_in_id y PIKER_ID son requeridos'
         });
     }
 
@@ -2935,56 +3085,95 @@ app.post('/traspaso-tomado', (req, res) => {
             });
         }
 
-        const checkQuery = `SELECT ESTATUS, PICKER_ID FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?`;
+        // Verificar si el picker ya está surtindo
+        const checkSurtidoQuery = `SELECT SURTIENDO FROM PICKERS WHERE PIKER_ID = ?`;
 
-        db.query(checkQuery, [traspasoInId], (err, result) => {
-            if (err || result.length === 0) {
+        db.query(checkSurtidoQuery, [pikerId], (err, surtidoResult) => {
+            if (err || surtidoResult.length === 0) {
                 db.detach();
-                console.error('Error en la verificación de estatus:', err);
+                console.error('Error verificando SURTIENDO del picker:', err);
                 return res.status(500).json({
-                    message: 'Error al verificar el estatus'
+                    message: 'Error al verificar estado del picker'
                 });
             }
 
-            const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
+            const { SURTIENDO } = surtidoResult[0];
 
-            // Validaciones
-            if (estatus !== 'P') {
+            if (SURTIENDO === true) {
                 db.detach();
                 return res.status(409).json({
-                    message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                    message: 'Ya tienes un pedido surtindo, no puedes tomar otro'
                 });
             }
 
-            if (currentPickerId !== null && currentPickerId !== pikerId) {
-                db.detach();
-                return res.status(403).json({
-                    message: `Este traspaso ya fue tomado por otro picker (ID: ${currentPickerId})`
-                });
-            }
+            // Continuar con la verificación del estatus del traspaso
+            const checkQuery = `SELECT ESTATUS, PICKER_ID FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?`;
 
-            // Proceder a actualizar
-            const updateQuery = `
-                UPDATE TRASPASOS_PENDIENTES
-                SET ESTATUS = 'T',
-                    PICKER_ID = ?,
-                    FECHA_INI = ?,
-                    HORA_INI = ?
-                WHERE TRASPASO_IN_ID = ?
-            `;
-
-            db.query(updateQuery, [pikerId, fechaIni, horaIni, traspasoInId], (err) => {
-                db.detach();
-
-                if (err) {
-                    console.error('Error actualizando pedido:', err);
+            db.query(checkQuery, [traspasoInId], (err, result) => {
+                if (err || result.length === 0) {
+                    db.detach();
+                    console.error('Error en la verificación de estatus:', err);
                     return res.status(500).json({
-                        message: 'No se pudo actualizar el pedido'
+                        message: 'Error al verificar el estatus'
                     });
                 }
 
-                return res.status(200).json({
-                    message: 'pedido tomado con éxito'
+                const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
+
+                if (estatus !== 'P') {
+                    db.detach();
+                    return res.status(409).json({
+                        message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                    });
+                }
+
+                if (currentPickerId !== null && currentPickerId !== pikerId) {
+                    db.detach();
+                    return res.status(403).json({
+                        message: `Este traspaso ya fue tomado por otro picker (ID: ${currentPickerId})`
+                    });
+                }
+
+                const updateQuery = `
+                    UPDATE TRASPASOS_PENDIENTES
+                    SET ESTATUS = 'T',
+                        PICKER_ID = ?,
+                        FECHA_INI = ?,
+                        HORA_INI = ?
+                    WHERE TRASPASO_IN_ID = ?
+                `;
+
+                db.query(updateQuery, [pikerId, fechaIni, horaIni, traspasoInId], (err) => {
+                    if (err) {
+                        db.detach();
+                        console.error('Error actualizando pedido:', err);
+                        return res.status(500).json({
+                            message: 'No se pudo actualizar el pedido'
+                        });
+                    }
+
+                    // Actualizar SURTIENDO a TRUE porque ya está tomando un pedido
+                    const updateSurtidoQuery = `
+                        UPDATE PICKERS
+                        SET SURTIENDO = TRUE
+                        WHERE PIKER_ID = ?
+                    `;
+
+                    db.query(updateSurtidoQuery, [pikerId], (err) => {
+                        db.detach();
+
+                        if (err) {
+                            console.error('Error actualizando estado SURTIENDO del picker:', err);
+                            // Aun así respondemos éxito porque el pedido fue tomado
+                            return res.status(200).json({
+                                message: 'Pedido tomado con éxito, pero no se pudo actualizar estado SURTIENDO del picker'
+                            });
+                        }
+
+                        return res.status(200).json({
+                            message: 'Pedido tomado con éxito'
+                        });
+                    });
                 });
             });
         });
@@ -3068,8 +3257,9 @@ app.post('/traspaso-update', (req, res) => {
             });
         }
 
+        // Obtener el ESTATUS y PICKER_ID actual
         const selectQuery = `
-            SELECT ESTATUS FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?
+            SELECT ESTATUS, PICKER_ID FROM TRASPASOS_PENDIENTES WHERE TRASPASO_IN_ID = ?
         `;
 
         db.query(selectQuery, [traspasoInId], (err, result) => {
@@ -3081,7 +3271,7 @@ app.post('/traspaso-update', (req, res) => {
                 });
             }
 
-            const currentStatus = result[0].ESTATUS;
+            const { ESTATUS: currentStatus, PICKER_ID: currentPickerId } = result[0];
 
             if (currentStatus === 'S' || currentStatus === 'E') {
                 db.detach();
@@ -3099,18 +3289,42 @@ app.post('/traspaso-update', (req, res) => {
                 `;
 
                 db.query(updateQuery, [traspasoInId], (err) => {
-                    db.detach();
-
                     if (err) {
+                        db.detach();
                         console.error('Error actualizando el estatus a P:', err);
                         return res.status(500).json({
                             message: 'No se pudo actualizar el estatus a P'
                         });
                     }
 
-                    return res.status(200).json({
-                        message: 'Traspaso liberado correctamente (estatus cambiado a P)'
-                    });
+                    // Si había un picker asignado, actualizar SURTIENDO a FALSE
+                    if (currentPickerId) {
+                        const updateSurtidoQuery = `
+                            UPDATE PICKERS
+                            SET SURTIENDO = FALSE
+                            WHERE PIKER_ID = ?
+                        `;
+
+                        db.query(updateSurtidoQuery, [currentPickerId], (err) => {
+                            db.detach();
+
+                            if (err) {
+                                console.error('Error actualizando estado SURTIENDO del picker:', err);
+                                return res.status(200).json({
+                                    message: 'Traspaso liberado correctamente, pero no se pudo actualizar SURTIENDO del picker'
+                                });
+                            }
+
+                            return res.status(200).json({
+                                message: 'Traspaso liberado correctamente (estatus cambiado a P)'
+                            });
+                        });
+                    } else {
+                        db.detach();
+                        return res.status(200).json({
+                            message: 'Traspaso liberado correctamente (estatus cambiado a P)'
+                        });
+                    }
                 });
             } else {
                 db.detach();
@@ -3121,6 +3335,7 @@ app.post('/traspaso-update', (req, res) => {
         });
     });
 });
+
 
 app.post('/traspaso-enviado', (req, res) => {
     const {
