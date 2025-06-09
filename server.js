@@ -1993,35 +1993,6 @@ app.get('/ventanilla', (req, res) => {
         });
     });
 });
-app.get('/nuevos-traspasos', (req, res) => {
-    Firebird.attach(firebirdConfig, (err, db) => {
-        if (err) {
-            console.error('Error al conectar a Firebird:', err);
-            return res.status(500).json({ error: 'Error al conectar a la base de datos' });
-        }
-
-        const query = `
-      SELECT COUNT(*) AS TOTAL
-      FROM VENTANILLA_PENDIENTES
-      WHERE ESTATUS = 'P'
-    `;
-
-        db.query(query, (err, result) => {
-            db.detach();
-
-            if (err) {
-                console.error('Error en la consulta de nuevos traspasos:', err);
-                return res.status(500).json({ error: 'Error al consultar traspasos' });
-            }
-
-            // En Firebird la propiedad puede ser uppercase o lowercase, revisa
-            const total = result[0]?.TOTAL ?? result[0]?.total ?? 0;
-            const hayNuevo = total > 0;
-
-            res.json({ hayNuevo });
-        });
-    });
-});
 
 // DETALLE DE TRASPASO 
 app.post('/detalle-traspaso', (req, res) => {
