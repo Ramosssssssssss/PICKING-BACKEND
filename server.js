@@ -1024,12 +1024,17 @@ app.get('/folio', (req, res) => {
 
     let sql = '';
     const params = [folio];
+    let sistema = '';
+    let origenTabla = '';
+    let origenCampo = '';
 
     switch (prefix) {
         case 'ZAP':
         case 'D':
-            sql = `
-                SELECT DISTINCT 
+            sistema = 'PV';
+            origenTabla = 'DOCTOS_PV';
+            origenCampo = 'DOCTO_PV_ID';
+            sql = `SELECT DISTINCT 
                     DP.FOLIO, 
                     CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DPD.CLAVE_ARTICULO, 
@@ -1043,32 +1048,41 @@ app.get('/folio', (req, res) => {
                 FROM DOCTOS_PV DP
                 INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
-                WHERE DP.FOLIO = ?
-            `;
+                WHERE DP.FOLIO = ?`; 
             break;
 
         case 'VMA':
         case 'VMB':
         case 'VMC':
         case 'VMD':
-
+            sistema = 'IN';
+            origenTabla = 'DOCTOS_IN';
+            origenCampo = 'DOCTO_IN_ID';
             sql = `SELECT DISTINCT 
                     DV.FOLIO, 
                     CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DVD.CLAVE_ARTICULO, 
-                    DVD.UNIDADES
+                    DVD.UNIDADES,
+                    CL.NOMBRE,
+                    (
+                        SELECT FIRST 1 DC.TELEFONO1
+                        FROM DIRS_CLIENTES DC
+                        WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
+                    ) AS TELEFONO1
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-                WHERE DV.FOLIO = ?
-            `;
+                INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
+                WHERE DV.FOLIO = ?`; 
             break;
 
         case 'FCT':
         case 'PC':
         case 'PPM':
         case 'FPM':
-            sql = `
-                SELECT DISTINCT 
+            sistema = 'PM';
+            origenTabla = 'DOCTOS_VE';
+            origenCampo = 'DOCTO_VE_ID';
+            sql = ` SELECT DISTINCT 
                     CL.CLIENTE_ID AS CLIENTE_ID, 
                     CL.NOMBRE, 
                     DCL.CALLE, 
@@ -1089,18 +1103,18 @@ app.get('/folio', (req, res) => {
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
                 INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
                 INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
-                WHERE DV.FOLIO = ?
-            `;
+                WHERE DV.FOLIO = ?`; 
             break;
 
         case 'TC':
         case 'TST':
         case 'TVM':
         case 'TSV':
-        case 'TTO':
-            sql = `
-                SELECT 
-                    TI.DOCTO_IN_ID, 
+            sistema = 'TR';
+            origenTabla = 'TRASPASOS_IN';
+            origenCampo = 'TRASPASO_IN_ID';
+            sql = `SELECT 
+                    TI.DOCTO_IN_ID AS DOCTO_ID, 
                     TI.FOLIO, 
                     TD.CLAVE_ARTICULO,
                     TD.UNIDADES,
@@ -1108,8 +1122,7 @@ app.get('/folio', (req, res) => {
                 FROM TRASPASOS_IN TI
                 INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
                 LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
-                WHERE TI.FOLIO = ?
-            `;
+                WHERE TI.FOLIO = ?`; 
             break;
 
         default:
@@ -1119,6 +1132,7 @@ app.get('/folio', (req, res) => {
     Firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
             console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión a base de datos' });
         }
 
         db.query(sql, params, (err, result) => {
@@ -1130,286 +1144,87 @@ app.get('/folio', (req, res) => {
 
             res.json(result);
 
-            // Inserción condicional para FPM en CTRL_INF_ENV
-            if (prefix === 'FPM') {
-                db.query('SELECT DOCTO_VE_ID FROM DOCTOS_VE WHERE FOLIO = ?', [folio], (err, docRes) => {
-                    if (err || !docRes.length) {
-                        console.error('Error obteniendo DOCTO_VE_ID para FPM:', err);
+            if (!sistema || !origenTabla || !origenCampo) {
+                console.warn(`No se pudo identificar sistema/origen para: ${folio}`);
+                db.detach();
+                return;
+            }
+
+            const idQuery = `SELECT ${origenCampo} AS DOCTO_ID FROM ${origenTabla} WHERE FOLIO = ?`;
+
+            db.query(idQuery, [folio], (err, idRes) => {
+                if (err || !idRes.length) {
+                    console.error(`Error obteniendo ID para ${folio}:`, err);
+                    db.detach();
+                    return;
+                }
+
+                const doctoId = idRes[0].DOCTO_ID;
+
+                const checkSqlAll = `SELECT PROCESO_ID FROM CTRL_INF_ENV WHERE DOCTO_DEST_ID = ?`;
+
+                db.query(checkSqlAll, [doctoId], (checkErr, checkRes) => {
+                    if (checkErr) {
+                        console.error('Error verificando CTRL_INF_ENV:', checkErr);
                         db.detach();
                         return;
                     }
 
-                    const doctoVeId = docRes[0].DOCTO_VE_ID;
-
-                    // Verificar si ya existe un registro
-                    const checkSql = `
-                        SELECT 1 FROM CTRL_INF_ENV
-                        WHERE DOCTO_DEST_ID = ? AND PROCESO_ID = 5
-                    `;
-
-                    db.query(checkSql, [doctoVeId], (checkErr, checkRes) => {
-                        if (checkErr) {
-                            console.error('Error verificando duplicado en CTRL_INF_ENV:', checkErr);
-                            db.detach();
-                            return;
-                        }
-
-                        if (checkRes.length > 0) {
-                            console.log(`Ya existe registro en CTRL_INF_ENV para DOCTO_DEST_ID = ${doctoVeId}`);
-                            db.detach();
-                            return;
-                        }
-
+                    if (checkRes.length === 0) {
+                        // No existe, insertamos
                         const insertSql = `
                             INSERT INTO CTRL_INF_ENV (
-                                SISTEMA,
                                 DOCTO_DEST_ID,
                                 PROCESO_ID,
                                 FECHA_PROC_5,
-                               
-                            ) VALUES (?, ?, ?, CURRENT_DATE )
+                                SISTEMA
+                            ) VALUES (?, ?, CURRENT_DATE, ?)
                         `;
 
-                        db.query(insertSql, ['PM', doctoVeId, 5], (insertErr) => {
+                        db.query(insertSql, [doctoId, 5, 'FN'], (insertErr) => {
                             db.detach();
                             if (insertErr) {
-                                console.error('Error insertando en CTRL_INF_ENV:', insertErr);
+                                console.error('❌ Error insertando en CTRL_INF_ENV:', insertErr);
                             } else {
-                                console.log(`Insert realizado en CTRL_INF_ENV para FPM: DOCTO_DEST_ID = ${doctoVeId}`);
+                                console.log(`📥 Insertado nuevo registro con PROCESO_ID = 5 para DOCTO_DEST_ID = ${doctoId}`);
                             }
                         });
-                    });
-                });
-            } else {
-                db.detach();
-            }
-        });
-    });
-});
-app.post('/folios', (req, res) => {
-    const { folios } = req.body;
+                    } else {
+                        // Ya existe registro(s)
+                        const hasProceso5 = checkRes.some(row => row.PROCESO_ID === 5);
 
-    if (!Array.isArray(folios) || folios.length === 0) {
-        return res.status(400).json({ error: 'Se requiere un arreglo de folios' });
-    }
-
-    const resultados = [];
-    let pendientes = folios.length;
-    let errores = [];
-
-    folios.forEach((folio) => {
-        const match = folio.match(/^([A-Z]+)[0-9]+$/i);
-        if (!match) {
-            errores.push({ folio, error: 'Formato inválido' });
-            if (--pendientes === 0) responder();
-            return;
-        }
-
-        const prefix = match[1].toUpperCase();
-        let sql = '';
-        let params = [folio];
-
-        switch (prefix) {
-            case 'ZAP':
-            case 'D':
-                sql = `SELECT DISTINCT 
-          DP.FOLIO, 
-          CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DPD.CLAVE_ARTICULO, 
-          DPD.UNIDADES,
-          CL.NOMBRE,
-
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_PV DP
-        INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
-        WHERE DP.FOLIO = ?`; // misma consulta que ya tienes
-                break;
-
-            case 'VMA':
-            case 'VMB':
-            case 'VMC':
-            case 'VMD':
-                sql = `SELECT DISTINCT 
-          DV.FOLIO, 
-          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DVD.CLAVE_ARTICULO, 
-          DVD.UNIDADES,
-          CL.NOMBRE,
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_IN DV
-        INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
-        WHERE DV.FOLIO = ?`;
-                break;
-
-            case 'FCT':
-            case 'FPM':
-            case 'PC':
-            case 'PPM':
-
-                sql = `SELECT DISTINCT 
-          CL.CLIENTE_ID AS CLIENTE_ID, 
-          CL.NOMBRE, 
-          DCL.CALLE, 
-          DCL.COLONIA, 
-          DV.FOLIO,       
-          CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-          DVD.CLAVE_ARTICULO,
-          DVD.UNIDADES,
-          DV.IMPORTE_NETO,
-          DV.TOTAL_IMPUESTOS,
-          (DV.IMPORTE_NETO + DV.TOTAL_IMPUESTOS) AS TOTAL,
-          (
-            SELECT FIRST 1 DC.TELEFONO1
-            FROM DIRS_CLIENTES DC
-            WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
-          ) AS TELEFONO1
-        FROM DOCTOS_VE DV
-        INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
-        INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
-        INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
-        WHERE DV.FOLIO = ?`;
-                break;
-
-            case 'TC':
-            case 'TST':
-            case 'TVM':
-            case 'TSV':
-                sql = ` SELECT 
-          TI.DOCTO_IN_ID, 
-          TI.FOLIO, 
-          TD.CLAVE_ARTICULO,
-          TD.UNIDADES,
-          SUC.NOMBRE 
-        FROM TRASPASOS_IN TI
-        INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
-        LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
-        WHERE TI.FOLIO = ?`; // misma consulta traspasos
-                break;
-
-            default:
-                errores.push({ folio, error: `Prefijo no reconocido: ${prefix}` });
-                if (--pendientes === 0) responder();
-                return;
-        }
-
-        Firebird.attach(firebirdConfig, (err, db) => {
-            if (err) {
-                errores.push({ folio, error: 'Error de conexión' });
-                if (--pendientes === 0) responder();
-                return;
-            }
-
-            db.query(sql, params, (err, result) => {
-                db.detach();
-                if (err) {
-                    errores.push({ folio, error: 'Error al consultar' });
-                } else {
-                    result.forEach(r => {
-                        resultados.push({ ...r, FOLIO_ORIGINAL: folio });
-                    });
-                }
-
-                if (--pendientes === 0) responder();
-            });
-        });
-    });
-
-    function responder() {
-        res.json({ datos: resultados, errores });
-    }
-});
-
-
-//salida pero 1x1 
-app.post('/registrar-salida', (req, res) => {
-    const { tipoDocumento, docInfo, operador, guardia } = req.body;
-    console.log('Body recibido en /registrar-salida:', req.body);
-
-    if (!tipoDocumento || !docInfo || !operador || !guardia) {
-        return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const insertQuery = `
-    INSERT INTO FOLIOS_ENTREGA (
-      FOLIO,
-      NOMBRE_CLIENTE,
-      FECHA_SALIDA,
-      OPERADOR,
-      GUARDIA,
-      ESTADO
-    ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, 'PENDIENTE')
-  `;
-
-    const docIdField = tipoDocumento === 'DOCTO_VE' ? 'DOCTO_VE_ID'
-        : tipoDocumento === 'TRASPASO_IN' ? 'DOCTO_IN_ID'
-            : 'DOCTO_PV_ID';
-
-    const updateQuery = `
-    UPDATE CTRL_INF_ENV
-    SET PROCESO_ID = 5,
-        FECHA_PROC_5 = CURRENT_TIMESTAMP
-    WHERE DOCTO_ORIGEN_ID = ?
-  `;
-
-    Firebird.attach(firebirdConfig, (err, db) => {
-        if (err) {
-            console.error('Error al conectar con Firebird:', err);
-            return res.status(500).json({ error: 'Error de conexión a Firebird' });
-        }
-
-        db.transaction(Firebird.ISOLATION_READ_COMMITTED, (err, transaction) => {
-            if (err) {
-                console.error('Error iniciando transacción:', err);
-                db.detach();
-                return res.status(500).json({ error: 'Error iniciando transacción' });
-            }
-
-            transaction.query(insertQuery, [
-                docInfo.FOLIO,
-                docInfo.NOMBRE_CLIENTE,
-                operador,
-                guardia
-            ], (err) => {
-                if (err) {
-                    console.error('Error al insertar FOLIO:', err);
-                    transaction.rollback(() => db.detach());
-                    return res.status(500).json({ error: 'Error insertando FOLIO' });
-                }
-
-                const docId = docInfo[docIdField];
-
-                transaction.query(updateQuery, [docId], (err) => {
-                    if (err) {
-                        console.error('Error al actualizar documento:', err);
-                        transaction.rollback(() => db.detach());
-                        return res.status(500).json({ error: 'Error actualizando documento' });
-                    }
-
-                    transaction.commit((err) => {
-                        if (err) {
-                            console.error('Error al confirmar transacción:', err);
+                        if (hasProceso5) {
+                            // Ya existe con proceso 5, no hacemos nada
+                            console.log(`✔️ Ya existe registro con PROCESO_ID = 5 para DOCTO_DEST_ID = ${doctoId}`);
                             db.detach();
-                            return res.status(500).json({ error: 'Error al confirmar transacción' });
-                        }
+                        } else {
+                            // Existe con otro proceso, actualizamos a 5
+                            const updateSql = `
+                                UPDATE CTRL_INF_ENV
+                                SET PROCESO_ID = 5,
+                                    FECHA_PROC_5 = CURRENT_DATE,
+                                    SISTEMA = ?
+                                WHERE DOCTO_DEST_ID = ?
+                            `;
 
-                        db.detach();
-                        return res.json({ success: true, message: 'Salida registrada exitosamente' });
-                    });
+                            db.query(updateSql, ['FN', doctoId], (updateErr) => {
+                                db.detach();
+                                if (updateErr) {
+                                    console.error('❌ Error actualizando CTRL_INF_ENV:', updateErr);
+                                } else {
+                                    console.log(`♻️ Actualizado registro a PROCESO_ID = 5 para DOCTO_DEST_ID = ${doctoId}`);
+                                }
+                            });
+                        }
+                    }
                 });
             });
         });
     });
 });
+
+
+
 
 //array de salidas para dar salida a varios documentos a la vez (en un solo grupo)
 app.post('/registrar-salida-multiple', (req, res) => {
