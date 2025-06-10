@@ -807,19 +807,19 @@ app.get('/historial', (req, res) => {
     });
 });
 app.get('/descargar-pdf', (req, res) => {
-  const { fecha } = req.query;
+    const { fecha } = req.query;
 
-  if (!fecha) {
-    return res.status(400).json({ error: 'Falta el parámetro "fecha" (YYYY-MM-DD)' });
-  }
-
-  Firebird.attach(firebirdConfig, (err, db) => {
-    if (err) {
-      console.error('Conexión Firebird fallida:', err);
-      return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+    if (!fecha) {
+        return res.status(400).json({ error: 'Falta el parámetro "fecha" (YYYY-MM-DD)' });
     }
 
-    const sql = `
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Conexión Firebird fallida:', err);
+            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+        }
+
+        const sql = `
       SELECT 
         VISITA_ID,
         NOMBRE,
@@ -833,142 +833,142 @@ app.get('/descargar-pdf', (req, res) => {
       ORDER BY HORA_ENTRADA DESC
     `;
 
-    db.query(sql, [fecha], (err, result) => {
-      db.detach();
+        db.query(sql, [fecha], (err, result) => {
+            db.detach();
 
-      if (err) {
-        console.error('Error al consultar visitas:', err);
-        return res.status(500).json({ error: 'Error al obtener visitas' });
-      }
+            if (err) {
+                console.error('Error al consultar visitas:', err);
+                return res.status(500).json({ error: 'Error al obtener visitas' });
+            }
 
-      if (!result || result.length === 0) {
-        return res.status(404).json({ error: 'No hay visitas para la fecha indicada' });
-      }
+            if (!result || result.length === 0) {
+                return res.status(404).json({ error: 'No hay visitas para la fecha indicada' });
+            }
 
-      const visitasNormalizadas = result.map((v) => ({
-        visita_id: v.VISITA_ID,
-        nombre: v.NOMBRE || '',
-        motivo: v.MOTIVO || '',
-        area: v.AREA || '',
-        colaborador: v.COLABORADOR || '',
-        hora_entrada: v.HORA_ENTRADA || '',
-        fecha_entrada: v.FECHA_ENTRADA || '',
-      }));
+            const visitasNormalizadas = result.map((v) => ({
+                visita_id: v.VISITA_ID,
+                nombre: v.NOMBRE || '',
+                motivo: v.MOTIVO || '',
+                area: v.AREA || '',
+                colaborador: v.COLABORADOR || '',
+                hora_entrada: v.HORA_ENTRADA || '',
+                fecha_entrada: v.FECHA_ENTRADA || '',
+            }));
 
-      const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+            const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=visitas_${fecha}.pdf`);
-      doc.pipe(res);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=visitas_${fecha}.pdf`);
+            doc.pipe(res);
 
-      // --- HEADER ---
-      function drawHeader() {
-        doc
-          .fillColor('#34495e')
-          .fontSize(24)
-          .font('Helvetica-Bold')
-          .text('Historial de Visitas', 50, 40);
+            // --- HEADER ---
+            function drawHeader() {
+                doc
+                    .fillColor('#34495e')
+                    .fontSize(24)
+                    .font('Helvetica-Bold')
+                    .text('Historial de Visitas', 50, 40);
 
-        const fechaFormatted = new Date(fecha).toLocaleDateString('es-ES', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                const fechaFormatted = new Date(fecha).toLocaleDateString('es-ES', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                doc
+                    .fontSize(12)
+                    .fillColor('#7f8c8d')
+                    .font('Helvetica-Oblique')
+                    .text(fechaFormatted, 50, 70);
+
+                // Línea decorativa
+                doc
+                    .moveTo(50, 95)
+                    .lineTo(545, 95)
+                    .lineWidth(2)
+                    .strokeColor('#2980b9')
+                    .stroke();
+
+                // (Opcional) Logo: descomenta y cambia ruta si tienes uno
+                // doc.image('path/to/logo.png', 480, 30, { width: 50 });
+            }
+
+            // --- TABLE ---
+
+            function drawTable(headers, rows, startY) {
+                const columnWidths = [50, 140, 130, 90, 110];
+                const startX = 50;
+                let y = startY;
+
+                // Header background
+                doc.fillColor('#2980b9');
+                doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
+
+                // Header text
+                doc.fillColor('white').fontSize(12).font('Helvetica-Bold');
+                let x = startX;
+                headers.forEach((header, i) => {
+                    doc.text(header, x + 5, y + 8, { width: columnWidths[i] - 10, align: 'center' });
+                    x += columnWidths[i];
+                });
+
+                y += 30;
+
+                // Rows
+                doc.font('Helvetica').fontSize(10);
+                rows.forEach((row, index) => {
+                    // Alternar color de fila
+                    if (index % 2 === 0) {
+                        doc.fillColor('#ecf0f1');
+                        doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
+                    }
+                    doc.fillColor('#2c3e50');
+                    const fechaFormateada = row.fecha_entrada
+                        ? new Date(row.fecha_entrada).toLocaleDateString('es-ES')
+                        : '';
+                    x = startX;
+                    [
+                        row.visita_id,
+                        row.nombre,
+                        row.motivo,
+                        row.area,
+                        row.colaborador,
+                    ].forEach((text, i) => {
+                        doc.text(String(text), x + 5, y + 8, { width: columnWidths[i] - 10, align: 'left' });
+                        x += columnWidths[i];
+                    });
+
+                    y += 30;
+
+                    // Salto de página si se acerca al final
+                    if (y > 700) { // un poco antes para más margen
+                        doc.addPage();
+                        y = 50;
+                    }
+                });
+
+                return y;
+            }
+
+            // --- FOOTER ---
+            function addFooter(pageNumber, totalPages) {
+                doc.fontSize(9).fillColor('#7f8c8d');
+                const footerText = `Página ${pageNumber} de ${totalPages}`;
+                doc.text(footerText, 50, 780, { align: 'center', width: 500 });
+            }
+
+            // --- CREAR PDF ---
+            drawHeader();
+            const headers = ['ID', 'Nombre', 'Motivo', 'Área', 'Colaborador'];
+            drawTable(headers, visitasNormalizadas, 150);
+
+            // Agregar números de página
+            const pages = doc.bufferedPageRange();
+            for (let i = 0; i < pages.count; i++) {
+                doc.switchToPage(i);
+                addFooter(i + 1, pages.count);
+            }
+
+            doc.end();
         });
-        doc
-          .fontSize(12)
-          .fillColor('#7f8c8d')
-          .font('Helvetica-Oblique')
-          .text(fechaFormatted, 50, 70);
-
-        // Línea decorativa
-        doc
-          .moveTo(50, 95)
-          .lineTo(545, 95)
-          .lineWidth(2)
-          .strokeColor('#2980b9')
-          .stroke();
-
-        // (Opcional) Logo: descomenta y cambia ruta si tienes uno
-        // doc.image('path/to/logo.png', 480, 30, { width: 50 });
-      }
-
-      // --- TABLE ---
-      
-     function drawTable(headers, rows, startY) {
- const columnWidths = [50, 140, 130, 90, 110];
-  const startX = 50;
-  let y = startY;
-
-  // Header background
-  doc.fillColor('#2980b9');
-  doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
-
-  // Header text
-  doc.fillColor('white').fontSize(12).font('Helvetica-Bold');
-  let x = startX;
-  headers.forEach((header, i) => {
-    doc.text(header, x + 5, y + 8, { width: columnWidths[i] - 10, align: 'center' });
-    x += columnWidths[i];
-  });
-
-  y += 30;
-
-  // Rows
-  doc.font('Helvetica').fontSize(10);
-  rows.forEach((row, index) => {
-    // Alternar color de fila
-    if (index % 2 === 0) {
-      doc.fillColor('#ecf0f1');
-      doc.rect(startX, y, columnWidths.reduce((a, b) => a + b, 0), 30).fill();
-    }
-    doc.fillColor('#2c3e50');
- const fechaFormateada = row.fecha_entrada
-      ? new Date(row.fecha_entrada).toLocaleDateString('es-ES')
-      : '';
-    x = startX;
-    [
-      row.visita_id,
-      row.nombre,
-      row.motivo,
-      row.area,
-      row.colaborador,
-    ].forEach((text, i) => {
-      doc.text(String(text), x + 5, y + 8, { width: columnWidths[i] - 10, align: 'left' });
-      x += columnWidths[i];
     });
-
-    y += 30;
-
-    // Salto de página si se acerca al final
-    if (y > 700) { // un poco antes para más margen
-      doc.addPage();
-      y = 50;
-    }
-  });
-
-  return y;
-}
-
-      // --- FOOTER ---
-      function addFooter(pageNumber, totalPages) {
-        doc.fontSize(9).fillColor('#7f8c8d');
-        const footerText = `Página ${pageNumber} de ${totalPages}`;
-        doc.text(footerText, 50, 780, { align: 'center', width: 500 });
-      }
-
-      // --- CREAR PDF ---
-      drawHeader();
-const headers = ['ID', 'Nombre', 'Motivo', 'Área', 'Colaborador'];
-      drawTable(headers, visitasNormalizadas, 150);
-
-      // Agregar números de página
-      const pages = doc.bufferedPageRange();
-      for (let i = 0; i < pages.count; i++) {
-        doc.switchToPage(i);
-        addFooter(i + 1, pages.count);
-      }
-
-      doc.end();
-    });
-  });
 });
 //OPERADORES
 app.get('/buscar-usuario', (req, res) => {
@@ -1031,6 +1031,8 @@ app.get('/folio', (req, res) => {
     switch (prefix) {
         case 'ZAP':
         case 'D':
+        case 'E':
+
             sistema = 'PV';
             origenTabla = 'DOCTOS_PV';
             origenCampo = 'DOCTO_PV_ID';
@@ -1048,13 +1050,19 @@ app.get('/folio', (req, res) => {
                 FROM DOCTOS_PV DP
                 INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
-                WHERE DP.FOLIO = ?`; 
+                WHERE DP.FOLIO = ?`;
             break;
 
         case 'VMA':
         case 'VMB':
         case 'VMC':
         case 'VMD':
+        case 'VME':
+        case 'VMF':
+        case 'VMI':
+
+        case 'VMK':
+        case 'VML':
             sistema = 'IN';
             origenTabla = 'DOCTOS_IN';
             origenCampo = 'DOCTO_IN_ID';
@@ -1069,7 +1077,7 @@ app.get('/folio', (req, res) => {
                     ) AS TELEFONO1
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-                WHERE DV.FOLIO = `; 
+                WHERE DV.FOLIO = `;
             break;
 
         case 'FCT':
@@ -1100,13 +1108,15 @@ app.get('/folio', (req, res) => {
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
                 INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
                 INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
-                WHERE DV.FOLIO = ?`; 
+                WHERE DV.FOLIO = ?`;
             break;
 
         case 'TC':
         case 'TST':
         case 'TVM':
         case 'TSV':
+        case 'TTO':
+
             sistema = 'TR';
             origenTabla = 'TRASPASOS_IN';
             origenCampo = 'TRASPASO_IN_ID';
@@ -1119,7 +1129,7 @@ app.get('/folio', (req, res) => {
                 FROM TRASPASOS_IN TI
                 INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
                 LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
-                WHERE TI.FOLIO = ?`; 
+                WHERE TI.FOLIO = ?`;
             break;
 
         default:
@@ -1949,7 +1959,7 @@ app.post('/tomar-traspaso', (req, res) => {
                     WHERE TRASPASO_IN_ID = ?
                 `;
 
-              const updateSurtidoQuery = `
+                const updateSurtidoQuery = `
     UPDATE PICKERS
     SET SURTIENDO = TRUE
     WHERE PIKER_ID = ?
