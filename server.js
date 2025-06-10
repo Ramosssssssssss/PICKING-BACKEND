@@ -1063,16 +1063,13 @@ app.get('/folio', (req, res) => {
                     CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DVD.CLAVE_ARTICULO, 
                     DVD.UNIDADES,
-                    CL.NOMBRE,
                     (
                         SELECT FIRST 1 DC.TELEFONO1
                         FROM DIRS_CLIENTES DC
-                        WHERE DC.CLIENTE_ID = CL.CLIENTE_ID AND DC.TELEFONO1 IS NOT NULL
                     ) AS TELEFONO1
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-                INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
-                WHERE DV.FOLIO = ?`; 
+                WHERE DV.FOLIO = `; 
             break;
 
         case 'FCT':
