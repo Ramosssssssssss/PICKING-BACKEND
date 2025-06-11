@@ -1,15 +1,24 @@
 const express = require('express');
-const PDFDocument = require('pdfkit');
-
-const cors = require('cors');
 const bodyParser = require('body-parser');
 const Firebird = require('node-firebird');
+const cors = require('cors');
+
+const PDFDocument = require('pdfkit');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const {
     fileTypeFromBuffer
 } = require('file-type');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+    },
+});
 const PORT = 3051;
 
 app.use(cors({
@@ -30,6 +39,17 @@ const firebirdConfig = {
     pageSize: 4096,
     timelife: 60000,
 };
+app.set('io', io);
+
+// Socket.io conexión
+io.on('connection', (socket) => {
+    console.log('🟢 Cliente conectado por WebSocket');
+
+    socket.on('disconnect', () => {
+        console.log('🔴 Cliente desconectado');
+    });
+});
+
 
 function readBlob(blob) {
     return new Promise((resolve, reject) => {
@@ -1230,9 +1250,6 @@ app.get('/folio', (req, res) => {
     });
 });
 
-
-
-
 //array de salidas para dar salida a varios documentos a la vez (en un solo grupo)
 app.post('/registrar-salida-multiple', (req, res) => {
     const { registros } = req.body;
@@ -1361,7 +1378,7 @@ app.post('/registrar-salida-multiple', (req, res) => {
 
 
 
-//recibos: 
+//recibos APP: 
 app.post('/consulta-recibos', (req, res) => {
     const { folio, sucursalDestinoId } = req.body;
 
@@ -1812,6 +1829,38 @@ app.get('/ventanilla', (req, res) => {
             return res.status(200).json({
                 pendientes: result
             });
+        });
+    });
+});
+let ultimoIDRegistrado = 0; // Aquí guardamos el último ID visto
+
+app.get('/nuevos-traspasos', (req, res) => {
+    Firebird.attach(firebirdConfig, (err, db) => {
+        if (err) {
+            console.error('Error al conectar a Firebird:', err);
+            return res.status(500).json({ hayNuevo: false });
+        }
+
+        const query = `SELECT MAX(TRASPASO_IN_ID) AS MAX_ID FROM VENTANILLA_PENDIENTES WHERE ESTATUS = 'P'`;
+
+        db.query(query, (err, result) => {
+            db.detach();
+
+            if (err || !result || result.length === 0) {
+                console.error('Error al obtener MAX_ID:', err);
+                return res.status(500).json({ hayNuevo: false });
+            }
+
+            const nuevoMax = result[0].MAX_ID || 0;
+
+            const hayNuevo = nuevoMax > ultimoIDRegistrado;
+
+            if (hayNuevo) {
+                ultimoIDRegistrado = nuevoMax;
+                console.log(`🚨 Nuevo traspaso detectado: ID ${nuevoMax}`);
+            }
+
+            return res.status(200).json({ hayNuevo });
         });
     });
 });
@@ -3267,6 +3316,6 @@ app.get('/checar-server', (req, res) => {
         version: '1.0.0'
     });
 });
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor backend escuchando en http://0.0.0.0:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🟢 Servidor backend y WebSocket en http://0.0.0.0:${PORT}`);
 });

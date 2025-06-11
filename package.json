@@ -5,6 +5,7 @@
     "express": "^5.1.0",
     "file-type": "^20.5.0",
     "node-firebird": "^1.1.9",
-    "pdfkit": "^0.17.1"
+    "pdfkit": "^0.17.1",
+    "socket.io": "^4.8.1"
   }
 }
