@@ -1090,11 +1090,7 @@ app.get('/folio', (req, res) => {
                     DV.FOLIO, 
                     CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DVD.CLAVE_ARTICULO, 
-                    DVD.UNIDADES,
-                    (
-                        SELECT FIRST 1 DC.TELEFONO1
-                        FROM DIRS_CLIENTES DC
-                    ) AS TELEFONO1
+                    DVD.UNIDADES
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
                 WHERE DV.FOLIO = `;
