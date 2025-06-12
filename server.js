@@ -49,7 +49,7 @@ io.on('connection', (socket) => {
         console.log('🔴 Cliente desconectado');
     });
 });
-
+//aqui va setinterval de eventos de ventanilla pendientes
 function readBlob(blob) {
     return new Promise((resolve, reject) => {
         if (!blob) return resolve(null);
@@ -1059,6 +1059,7 @@ app.get('/folio', (req, res) => {
                     DP.FOLIO, 
                     CAST(DP.FECHA AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DPD.CLAVE_ARTICULO, 
+                    ART.NOMBRE AS ARTICULO,
                     DPD.UNIDADES,
                     CL.NOMBRE,
                     (
@@ -1069,6 +1070,8 @@ app.get('/folio', (req, res) => {
                 FROM DOCTOS_PV DP
                 INNER JOIN DOCTOS_PV_DET DPD ON DPD.DOCTO_PV_ID = DP.DOCTO_PV_ID
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DP.CLIENTE_ID
+				INNER JOIN CLAVES_ARTICULOS CART ON CART.ARTICULO_ID = DPD.ARTICULO_ID
+				INNER JOIN ARTICULOS ART ON ART.ARTICULO_ID = CART.ARTICULO_ID
                 WHERE DP.FOLIO = ?`;
             break;
 
@@ -1088,11 +1091,14 @@ app.get('/folio', (req, res) => {
             sql = `SELECT DISTINCT 
                     DV.FOLIO, 
                     CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
-                    DVD.CLAVE_ARTICULO, 
+                    DVD.CLAVE_ARTICULO,
+                    ART.NOMBRE AS ARTICULO, 
                     DVD.UNIDADES
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-                WHERE DV.FOLIO = ?`;
+                INNER JOIN CLAVES_ARTICULOS CART ON CART.ARTICULO_ID = DVD.ARTICULO_ID
+				INNER JOIN ARTICULOS ART ON ART.ARTICULO_ID = CART.ARTICULO_ID
+                WHERE DV.FOLIO =  ?`;
             break;
 
         case 'FCT':
@@ -1102,7 +1108,7 @@ app.get('/folio', (req, res) => {
             sistema = 'PM';
             origenTabla = 'DOCTOS_VE';
             origenCampo = 'DOCTO_VE_ID';
-            sql = ` SELECT DISTINCT 
+            sql = `SELECT DISTINCT 
                     CL.CLIENTE_ID AS CLIENTE_ID, 
                     CL.NOMBRE, 
                     DCL.CALLE, 
@@ -1110,6 +1116,7 @@ app.get('/folio', (req, res) => {
                     DV.FOLIO,       
                     CAST(DV.FECHA_HORA_CREACION AS VARCHAR(30)) AS FECHA_HORA_CREACION,
                     DVD.CLAVE_ARTICULO,
+                    ART.NOMBRE AS ARTICULO,
                     DVD.UNIDADES,
                     DV.IMPORTE_NETO,
                     DV.TOTAL_IMPUESTOS,
@@ -1123,6 +1130,8 @@ app.get('/folio', (req, res) => {
                 INNER JOIN CLIENTES CL ON CL.CLIENTE_ID = DV.CLIENTE_ID
                 INNER JOIN DIRS_CLIENTES DCL ON DCL.CLIENTE_ID = CL.CLIENTE_ID
                 INNER JOIN DOCTOS_VE_DET DVD ON DVD.DOCTO_VE_ID = DV.DOCTO_VE_ID
+                INNER JOIN CLAVES_ARTICULOS CART ON CART.ARTICULO_ID = DVD.ARTICULO_ID
+				INNER JOIN ARTICULOS ART ON ART.ARTICULO_ID = CART.ARTICULO_ID
                 WHERE DV.FOLIO = ?`;
             break;
 
@@ -1135,15 +1144,18 @@ app.get('/folio', (req, res) => {
             sistema = 'TR';
             origenTabla = 'TRASPASOS_IN';
             origenCampo = 'TRASPASO_IN_ID';
-            sql = `SELECT 
+            sql = ` SELECT DISTINCT
                     TI.DOCTO_IN_ID AS DOCTO_ID, 
                     TI.FOLIO, 
                     TD.CLAVE_ARTICULO,
                     TD.UNIDADES,
-                    SUC.NOMBRE 
+                    SUC.NOMBRE,
+                    ART.NOMBRE AS ARTICULO
                 FROM TRASPASOS_IN TI
                 INNER JOIN SUCURSALES SUC ON SUC.SUCURSAL_ID = TI.SUCURSAL_DESTINO_ID
-                LEFT JOIN TRASPASOS_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
+                LEFT JOIN TRASPASOS_IN_DET TD ON TD.TRASPASO_IN_ID = TI.TRASPASO_IN_ID
+                INNER JOIN CLAVES_ARTICULOS CART ON CART.ARTICULO_ID = TD.ARTICULO_ID
+				INNER JOIN ARTICULOS ART ON ART.ARTICULO_ID = CART.ARTICULO_ID
                 WHERE TI.FOLIO = ?`;
             break;
 
