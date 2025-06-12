@@ -50,7 +50,6 @@ io.on('connection', (socket) => {
     });
 });
 
-
 function readBlob(blob) {
     return new Promise((resolve, reject) => {
         if (!blob) return resolve(null);
@@ -1093,7 +1092,7 @@ app.get('/folio', (req, res) => {
                     DVD.UNIDADES
                 FROM DOCTOS_IN DV
                 INNER JOIN DOCTOS_IN_DET DVD ON DVD.DOCTO_IN_ID = DV.DOCTO_IN_ID
-                WHERE DV.FOLIO = `;
+                WHERE DV.FOLIO = ?`;
             break;
 
         case 'FCT':
@@ -2505,71 +2504,113 @@ app.post('/tomar-pedido', (req, res) => {
                 });
             }
 
-            // Continuar con la verificación del estatus del pedido
-            const checkQuery = `SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
+            // Verificar el detalle del pedido antes de continuar
+            const detalleQuery = `
+                SELECT 
+                    COALESCE(CA.CLAVE_ARTICULO, 'NA') AS CODBAR, 
+                    DVD.CLAVE_ARTICULO, 
+                    DVD.UNIDADES_COMPROM AS UNIDADES,
+                    DVD.ARTICULO_ID, 
+                    DOCTO_VE_ID, 
+                    A.NOMBRE, 
+                    COALESCE(NA.LOCALIZACION, 'NA') AS LOCALIZACION, 
+                    A.UNIDAD_VENTA
+                FROM 
+                    DOCTOS_VE_DET DVD
+                    INNER JOIN CLAVES_ARTICULOS CA ON CA.ARTICULO_ID = DVD.ARTICULO_ID
+                    INNER JOIN ARTICULOS A ON A.ARTICULO_ID = DVD.ARTICULO_ID
+                    INNER JOIN NIVELES_ARTICULOS NA ON NA.ARTICULO_ID = DVD.ARTICULO_ID
+                WHERE 
+                    DOCTO_VE_ID = ?
+                    AND CA.ROL_CLAVE_ART_ID = 58486 
+                    AND NA.ALMACEN_ID = 188104 
+                    AND DVD.UNIDADES_COMPROM > 0
+                ORDER BY 
+                    COALESCE(NA.LOCALIZACION, 'NA') ASC
+            `;
 
-            db.query(checkQuery, [doctoVeId], (err, result) => {
-                if (err || result.length === 0) {
+            db.query(detalleQuery, [doctoVeId], (err, detalleResult) => {
+                if (err) {
                     db.detach();
-                    console.error('Error en la verificación de estatus:', err);
+                    console.error('Error al consultar detalle del pedido:', err);
                     return res.status(500).json({
-                        message: 'Error al verificar el estatus'
+                        message: 'Error al consultar detalle del pedido'
                     });
                 }
 
-                const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
-
-                if (estatus !== 'P') {
+                if (!detalleResult || detalleResult.length === 0) {
                     db.detach();
-                    return res.status(409).json({
-                        message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                    return res.status(404).json({
+                        message: 'Este pedido no contiene artículos para surtir, comunicate con el jefe de almacén'
                     });
                 }
 
-                if (currentPickerId !== null && currentPickerId !== pikerId) {
-                    db.detach();
-                    return res.status(403).json({
-                        message: `Este pedido ya fue tomado por otro picker (ID: ${currentPickerId})`
-                    });
-                }
+                // Continuar con la verificación del estatus del pedido
+                const checkQuery = `SELECT ESTATUS, PICKER_ID FROM PEDIDOS_PENDIENTES WHERE DOCTO_VE_ID = ?`;
 
-                const updateQuery = `
-                    UPDATE PEDIDOS_PENDIENTES
-                    SET ESTATUS = 'T',
-                        PICKER_ID = ?,
-                        FECHA_INI = ?,
-                        HORA_INI = ?
-                    WHERE DOCTO_VE_ID = ?
-                `;
-
-                db.query(updateQuery, [pikerId, fechaIni, horaIni, doctoVeId], (err) => {
-                    if (err) {
+                db.query(checkQuery, [doctoVeId], (err, result) => {
+                    if (err || result.length === 0) {
                         db.detach();
-                        console.error('Error actualizando pedido:', err);
+                        console.error('Error en la verificación de estatus:', err);
                         return res.status(500).json({
-                            message: 'No se pudo actualizar el pedido'
+                            message: 'Error al verificar el estatus'
                         });
                     }
 
-                    // Actualizar SURTIENDO a TRUE porque ya está tomando un pedido
-                    const updateSurtidoQuery = `
-                        UPDATE PICKERS
-                        SET SURTIENDO = TRUE
-                        WHERE PIKER_ID = ?
+                    const { ESTATUS: estatus, PICKER_ID: currentPickerId } = result[0];
+
+                    if (estatus !== 'P') {
+                        db.detach();
+                        return res.status(409).json({
+                            message: `El pedido ya fue tomado (estatus actual: ${estatus})`
+                        });
+                    }
+
+                    if (currentPickerId !== null && currentPickerId !== pikerId) {
+                        db.detach();
+                        return res.status(403).json({
+                            message: `Este pedido ya fue tomado por otro picker (ID: ${currentPickerId})`
+                        });
+                    }
+
+                    const updateQuery = `
+                        UPDATE PEDIDOS_PENDIENTES
+                        SET ESTATUS = 'T',
+                            PICKER_ID = ?,
+                            FECHA_INI = ?,
+                            HORA_INI = ?
+                        WHERE DOCTO_VE_ID = ?
                     `;
 
-                    db.query(updateSurtidoQuery, [pikerId], (err) => {
-                        db.detach();
-
+                    db.query(updateQuery, [pikerId, fechaIni, horaIni, doctoVeId], (err) => {
                         if (err) {
-                            console.error('Error actualizando estado SURTIENDO del picker:', err);
-                            return res.status(200).json({
-                                message: 'Pedido tomado con éxito, pero no se pudo actualizar estado SURTIENDO del picker'
+                            db.detach();
+                            console.error('Error actualizando pedido:', err);
+                            return res.status(500).json({
+                                message: 'No se pudo actualizar el pedido'
                             });
                         }
 
-                        return res.status(200).json({
-                            message: 'Pedido tomado con éxito'
+                        // Actualizar SURTIENDO a TRUE porque ya está tomando un pedido
+                        const updateSurtidoQuery = `
+                            UPDATE PICKERS
+                            SET SURTIENDO = TRUE
+                            WHERE PIKER_ID = ?
+                        `;
+
+                        db.query(updateSurtidoQuery, [pikerId], (err) => {
+                            db.detach();
+
+                            if (err) {
+                                console.error('Error actualizando estado SURTIENDO del picker:', err);
+                                return res.status(200).json({
+                                    message: 'Pedido tomado con éxito, pero no se pudo actualizar estado SURTIENDO del picker'
+                                });
+                            }
+
+                            return res.status(200).json({
+                                message: 'Pedido tomado con éxito'
+                            });
                         });
                     });
                 });
